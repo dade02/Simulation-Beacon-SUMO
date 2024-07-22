@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2024-07-12 12:51:38 by Eclipse SUMO netedit Version 1.15.0
+-->
+
+<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+    <!-- StoppingPlaces -->
+    <parkingArea id="pa_1" lane="E12_0" startPos="49.60" endPos="59.60" roadsideCapacity="3"/>
+    <parkingArea id="pa_0" lane="E16_0" startPos="34.61" endPos="44.61" roadsideCapacity="2"/>
+    <parkingArea id="pa_10" lane="E9_0" startPos="28.91" endPos="38.91" roadsideCapacity="1"/>
+    <parkingArea id="pa_11" lane="-E13_0" startPos="15.40" endPos="25.40" roadsideCapacity="1"/>
+    <parkingArea id="pa_12" lane="E11_0" startPos="13.00" endPos="23.00" roadsideCapacity="1"/>
+    <parkingArea id="pa_13" lane="-E11_0" startPos="14.93" endPos="24.93" roadsideCapacity="1"/>
+    <parkingArea id="pa_17" lane="E13_0" startPos="12.17" endPos="22.17" roadsideCapacity="1"/>
+    <parkingArea id="pa_2" lane="E3_0" startPos="26.44" endPos="36.44" roadsideCapacity="1"/>
+    <parkingArea id="pa_3" lane="E5_0" startPos="31.58" endPos="41.58" roadsideCapacity="1"/>
+    <parkingArea id="pa_4" lane="-E5_0" startPos="33.96" endPos="43.96" roadsideCapacity="1"/>
+    <parkingArea id="pa_5" lane="-E9_0" startPos="32.55" endPos="42.55" roadsideCapacity="1"/>
+    <parkingArea id="pa_6" lane="-E6_0" startPos="24.69" endPos="34.69" roadsideCapacity="1"/>
+    <parkingArea id="pa_7" lane="E6_0" startPos="25.76" endPos="35.76" roadsideCapacity="1"/>
+    <parkingArea id="pa_8" lane="E8_0" startPos="32.49" endPos="42.49" roadsideCapacity="1"/>
+    <parkingArea id="pa_9" lane="-E8_0" startPos="30.52" endPos="40.52" roadsideCapacity="1"/>
+    <parkingArea id="pa_14" lane="E15_0" startPos="13.72" endPos="23.72" roadsideCapacity="1"/>
+    <!-- Other additionals -->
+
+    <!--<rerouter id="rerouter_0" edges="E12" probability="1">
+        <interval begin="0" end="10000">
+            <destProbReroute id="E0"/>
+        </interval>
+    </rerouter>
+
+    <rerouter id="rerouter_1" edges="E0" probability="1">
+        <interval begin="0" end="10000">
+            <destProbReroute id="E12"/>
+        </interval>
+    </rerouter>-->
+
+</additional>
