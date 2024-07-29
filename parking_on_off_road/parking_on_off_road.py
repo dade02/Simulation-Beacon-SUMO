@@ -20,7 +20,7 @@ import sumolib
 import numpy as np
 from collections import defaultdict
 import random
-
+import csv
 
 def get_options():
     opt_parser = optparse.OptionParser()
@@ -227,8 +227,151 @@ def estrai_numero(veicolo):
     # Splitta la stringa sul punto e prendi la parte dopo il punto
     return int(veicolo.split('.')[1])
 
+
+def random_point_on_map():
+    # Ottenere i limiti della mappa
+    edges = traci.edge.getIDList()
+    min_x, min_y, max_x, max_y = float('inf'), float('inf'), float('-inf'), float('-inf')
+    NET_FILE = "parking_on_off_road.net.xml"
+    tree = ET.parse(NET_FILE)
+    root = tree.getroot()
+    ENTRY_EXIT_LIST = ["E1","-E1","E2","-E2"]
+    try:
+        # Iterare su tutti gli edge
+        for edge in root.findall('edge'):
+            # Iterare su tutte le lane all'interno dell'edge
+            if edge not in ENTRY_EXIT_LIST:
+                for lane in edge.findall('lane'):
+                    # Ottenere il valore dell'attributo shape
+                    shape = lane.get('shape')
+                    if shape:
+                        # Analizzare i punti dell'attributo shape
+                        points = shape.split()
+                        for point in points:
+                            x, y = map(float, point.split(','))
+                            # Aggiornare i limiti
+                            if x < min_x:
+                                min_x = x
+                            if y < min_y:
+                                min_y = y
+                            if x > max_x:
+                                max_x = x
+                            if y > max_y:
+                                max_y = y
+
+
+
+    except Exception as e:
+        print(f"Errore durante l'ottenimento dei limiti della mappa dal file di rete: {e}")
+        return None, None, None, None
+
+    # Generare un punto casuale all'interno dei limiti della mappa
+    random_x = random.uniform(min_x, max_x)
+    random_y = random.uniform(min_y, max_y)
+
+    # Ottenere l'edge più vicino al punto casuale
+    edge_id = None
+    while edge_id == None or edge_id in ENTRY_EXIT_LIST:
+        print(f"edge id: {edge_id}")
+        try:
+            random_x = random.uniform(min_x, max_x)
+            random_y = random.uniform(min_y, max_y)
+            edge_id, _, _ = traci.simulation.convertRoad(random_x, random_y, isGeo=False)
+        except traci.TraCIException:
+            edge_id = None
+
+
+    connected_edges = []
+    # Verificare se l'edge_id è quello di una junction e trovare un edge connesso
+    if edge_id and edge_id.startswith(':'):
+        for edge in root.findall('edge'):
+            print(f"to: {edge.get('to')}, current {(edge_id.split('_')[0])[1:]}")
+            if edge.get("to") == (edge_id.split('_')[0])[1:]:
+                connected_edges.append(edge.get("id"))
+
+        for e in connected_edges:
+            if not e.startswith(':') and e not in ENTRY_EXIT_LIST:
+                edge_id = e
+                break
+
+    return (random_x, random_y), edge_id
+
+
+def get_vehicle_ids_from_xml(xml_file):
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
+
+    vehicle_ids = []
+    for flow in root.findall('.//flow'):
+        flow_id = flow.get('id')
+        number = int(flow.get('number', 0))
+        for i in range(number):
+            vehicle_ids.append(f"{flow_id}.{i}")
+
+    return vehicle_ids
+
+
+def set_vehicle_destinations():
+    # Nome del file CSV
+    file_name = 'setDestination.csv'
+
+    # Controlla se il file esiste già
+    if os.path.exists(file_name):
+        print(f"{file_name} esiste già. Non verrà sovrascritto.")
+        return
+
+    # Ottenere la lista dei veicoli dal file XML
+    vehicle_ids = get_vehicle_ids_from_xml('parking_on_off_road.rou.xml')
+
+    if not vehicle_ids:
+        print("Nessun veicolo presente nel file XML.")
+        return
+
+
+
+    # Lista per salvare le destinazioni dei veicoli
+    destinations = []
+
+    for vehicle_id in vehicle_ids:
+        # Ottenere un punto casuale sulla mappa
+        (x, y), edge_id = random_point_on_map()
+        if edge_id:
+            destinations.append([vehicle_id, edge_id, x, y])
+
+    # Scrivere le destinazioni nel file CSV
+    with open(file_name, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['VehicleID', 'EdgeID', 'X', 'Y'])
+        for destination in destinations:
+            writer.writerow(destination)
+
+
+    print(f"{file_name} è stato creato con le destinazioni dei veicoli.")
+
+
+def get_vehicle_destinations():
+    # Nome del file CSV
+    file_name = 'setDestination.csv'
+
+    # Controlla se il file esiste
+    if not os.path.exists(file_name):
+        print(f"{file_name} non esiste. Assicurati che il file esista e riprova.")
+        return
+
+    # Legge le destinazioni dal file CSV
+    destinations = {}
+    with open(file_name, mode='r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            vehicle_id = row['VehicleID']
+            edge_id = row['EdgeID']
+            destinations[vehicle_id] = edge_id
+
+    return destinations
+
 #contiene il loop di controllo TraCI
 def run():
+    set_vehicle_destinations()
     parking_list = traci.parkingarea.getIDList()  #lista parcheggi
 
     parked_vehicles = {}                          # veicoli parcheggiati co relativi parcheggi
@@ -276,121 +419,136 @@ def run():
     REROUTE_PERIOD = 10000
 
     exit_lane_list = []
+    car_arrived_in_b = [] #lista di veicoli arrivati al loro punto B
 
+    destinations = get_vehicle_destinations() # punti B per ciascun veicolo
+    print(destinations)
     net = sumolib.net.readNet("parking_on_off_road.net.xml")
+
+
     while traci.simulation.getMinExpectedNumber() > 0:
         traci.simulationStep()
         current_time = traci.simulation.getTime()
 
 
         for vehicle_id in traci.vehicle.getIDList():
-            if not is_vehicle_parked(vehicle_id):
+            #se il veicolo non è arrivato al punto b
+            if vehicle_id not in car_arrived_in_b:
+                print(f"arrivo: {traci.vehicle.getRoute(vehicle_id)[-1]} newdest: {destinations[vehicle_id]}")
+                #se c'è arrivato ora
+                if traci.vehicle.getLaneID(vehicle_id).split('_')[0] == destinations[vehicle_id]:
+                    car_arrived_in_b.append(vehicle_id)
+                elif traci.vehicle.getRoute(vehicle_id)[-1] != destinations[vehicle_id]:
+                    traci.vehicle.changeTarget(vehicle_id, destinations[vehicle_id])
+                traci.vehicle.setColor(vehicle_id, (255, 0, 0, 255))
+            if vehicle_id in car_arrived_in_b:
+                if not is_vehicle_parked(vehicle_id):
 
-                #lista di veicoli che stanno uscendo
-                if traci.vehicle.getRoadID(vehicle_id) == exitLane and vehicle_id not in exit_lane_list:
-                    exit_lane_list.append(vehicle_id)
+                    #lista di veicoli che stanno uscendo
+                    if traci.vehicle.getRoadID(vehicle_id) == exitLane and vehicle_id not in exit_lane_list:
+                        exit_lane_list.append(vehicle_id)
 
-                if recent_changed_route_cars.get(vehicle_id) != None and current_time - recent_changed_route_cars[vehicle_id] > REROUTE_PERIOD:
-                    del recent_changed_route_cars[vehicle_id]
-                # se il veicolo ha appena svoltato, non vi è più il controllo sul doppio risettaggio
-                if recent_changed_route_cars.get(vehicle_id) != None:
-                    #print(f"edge veicolo: {vehicle_id} edge attuale: {traci.vehicle.getRoadID(vehicle_id)} meta: {traci.vehicle.getRoute(vehicle_id)[-1]}")
-                    #se sono alla destinazione
-                    if traci.vehicle.getRoadID(vehicle_id) == traci.vehicle.getRoute(vehicle_id)[-1]:
+                    if recent_changed_route_cars.get(vehicle_id) != None and current_time - recent_changed_route_cars[vehicle_id] > REROUTE_PERIOD:
                         del recent_changed_route_cars[vehicle_id]
-                        print(f"Il veicolo {vehicle_id} può di nuovo cambiare rotta")
-                        print(f"occorrenze: { car_history_edge[vehicle_id]}")
+                    # se il veicolo ha appena svoltato, non vi è più il controllo sul doppio risettaggio
+                    if recent_changed_route_cars.get(vehicle_id) != None:
+                        #print(f"edge veicolo: {vehicle_id} edge attuale: {traci.vehicle.getRoadID(vehicle_id)} meta: {traci.vehicle.getRoute(vehicle_id)[-1]}")
+                        #se sono alla destinazione
+                        if traci.vehicle.getRoadID(vehicle_id) == traci.vehicle.getRoute(vehicle_id)[-1]:
+                            del recent_changed_route_cars[vehicle_id]
+                            print(f"Il veicolo {vehicle_id} può di nuovo cambiare rotta")
+                            print(f"occorrenze: { car_history_edge[vehicle_id]}")
 
 
-                if vehicle_id in parked_vehicles:
-                    if is_exit_Parkage(vehicle_id,parked_vehicles[vehicle_id],parking_to_edge):
-                        #print(f"veicolo {vehicle_id} uscito dal parcheggio {parked_vehicles[vehicle_id]}")
-                        parking_car_parked[parked_vehicles[vehicle_id]] -= 1    #aggiorno il numero di veicoli parcheggiati
-                        del parked_vehicles[vehicle_id]                         #rimuovo da veicoli parcheggiati
-                        recent_parking_vehicles[vehicle_id] = current_time      #aggiungo a veicoli usciti da poco
+                    if vehicle_id in parked_vehicles:
+                        if is_exit_Parkage(vehicle_id,parked_vehicles[vehicle_id],parking_to_edge):
+                            #print(f"veicolo {vehicle_id} uscito dal parcheggio {parked_vehicles[vehicle_id]}")
+                            parking_car_parked[parked_vehicles[vehicle_id]] -= 1    #aggiorno il numero di veicoli parcheggiati
+                            del parked_vehicles[vehicle_id]                         #rimuovo da veicoli parcheggiati
+                            recent_parking_vehicles[vehicle_id] = current_time      #aggiungo a veicoli usciti da poco
 
-                        # cancello ultimo reroute se esiste
-                        # se la destinazione non è la lane dove vi è adesso il veicolo
-                        print(
-                            f"veicolo {vehicle_id} strada {traci.vehicle.getLaneID(vehicle_id).split('_')[0]} dest {traci.vehicle.getRoute(vehicle_id)[-1]}")
+                            # cancello ultimo reroute se esiste
+                            # se la destinazione non è la lane dove vi è adesso il veicolo
+                            print(
+                                f"veicolo {vehicle_id} strada {traci.vehicle.getLaneID(vehicle_id).split('_')[0]} dest {traci.vehicle.getRoute(vehicle_id)[-1]}")
 
-                        if traci.vehicle.getRoute(vehicle_id)[-1] != traci.vehicle.getLaneID(vehicle_id).split('_')[0]:
-                            if traci.vehicle.getRoute(vehicle_id)[-1] != exitLane:
-                                print(
-                                    f"la destinazione {traci.vehicle.getRoute(vehicle_id)[-1]} per il veicolo {vehicle_id} è da eliminare")
-                                car_history_edge[vehicle_id][traci.vehicle.getRoute(vehicle_id)[-1]] -= 1
-                                if car_history_edge[vehicle_id][traci.vehicle.getRoute(vehicle_id)[-1]] == 0:
-                                    del car_history_edge[vehicle_id][traci.vehicle.getRoute(vehicle_id)[-1]]
-
-
-
-
-                        #una volta che il veicolo è uscito dal parcheggio, lo indirizzo in una strada di uscita
-
-                        """from_edge_obj = net.getEdge(traci.vehicle.getLaneID(vehicle_id).split('_')[0])
-                        to_edge_obj = net.getEdge(exitLane)
-                        route = net.getShortestPath(from_edge_obj, to_edge_obj)
-                        path = route[0]
-                        edge_ids = [edge.getID() for edge in path]
-
-                        traci.vehicle.setRoute(vehicle_id,edge_ids)"""
-                        traci.vehicle.changeTarget(vehicle_id,exitLane)
-                        traci.vehicle.setColor(vehicle_id, (0, 255, 0, 255))
-
-
-
-                if vehicle_id not in recent_parking_vehicles:   #se il veicolo non ha lasciato un parcheggio da poco
-                    traci.vehicle.setColor(vehicle_id, (255, 0, 0, 255))
-                    for parking_id in parking_list:
-                        # se il veicolo è abbastanza vicino al parcheggio
-                        if is_near_parkage(vehicle_id,parking_id,parking_to_edge) and vehicle_id not in parked_vehicles:
-                            if park_vehicle(vehicle_id, parking_id, parking_car_parked, parking_capacity, parked_vehicles):
-                                print(f"Veicolo {vehicle_id} parcheggiato")
-                            else:
-                                #print("Veicolo non parcheggiato: non vi è più spazio! Cerco nuovo parcheggio")
-
-                                #trova il parcheggio libero più vicino
-                                """nearestRoute = find_nearest_parkage(parking_id, parking_list,parking_to_edge,parking_capacity)
-                                print(nearestRoute)
-                                if nearestRoute != None:
-                                    path = nearestRoute[0]
-                                    edge_ids = [edge.getID() for edge in path]
-                                    print(edge_ids)
-                                    traci.vehicle.setRoute(vehicle_id, edge_ids)"""
-
-                    #logica di rerouting casuale
-                    destination_edge = traci.vehicle.getRoute(vehicle_id)[-1]
-                    if destination_edge != exitLane:
-                        # controllo se il veicolo è vicino ad una junction
-                        near_junction, junctionID = is_vehicle_near_junction(vehicle_id,net, 25)
-                        if near_junction:
-                            all_edges = traci.edge.getIDList()
-                            # Filtra per ottenere solo gli edge reali
-                            real_edges = [edge for edge in all_edges if not edge.startswith(':')]
-                            #print(f"{traci.vehicle.getLaneID(vehicle_id).split('_')[0]} {real_edges}")
-
-                            # se il veicolo non è sulla junction
-                            if traci.vehicle.getLaneID(vehicle_id).split('_')[0] in real_edges:
-
-                                if recent_changed_route_cars.get(vehicle_id) == None:
-                                    #print(f"Vehicle {vehicle_id} is near junction {junctionID}")
-                                    # calcolo gli edge raggiungibili
-                                    laneID = traci.vehicle.getLaneID(vehicle_id)
-                                    reachable_edges = get_reachable_edges_from_lane(laneID)
-                                    #print(f"Vehicle {vehicle_id} on lane {laneID} can reach edges: {reachable_edges}")
-                                    if reachable_edges:
-                                        selected_lane, recent_changed_route_cars[
-                                            vehicle_id], pass_count = set_vehicle_route(vehicle_id, car_history_edge,
-                                                                                        reachable_edges)
-                                        #print(f"numero di passaggi: {pass_count}")
-                                        #print(f"Vehicle {vehicle_id} routed to lane {selected_lane}")
+                            if traci.vehicle.getRoute(vehicle_id)[-1] != traci.vehicle.getLaneID(vehicle_id).split('_')[0]:
+                                if traci.vehicle.getRoute(vehicle_id)[-1] != exitLane:
+                                    print(
+                                        f"la destinazione {traci.vehicle.getRoute(vehicle_id)[-1]} per il veicolo {vehicle_id} è da eliminare")
+                                    car_history_edge[vehicle_id][traci.vehicle.getRoute(vehicle_id)[-1]] -= 1
+                                    if car_history_edge[vehicle_id][traci.vehicle.getRoute(vehicle_id)[-1]] == 0:
+                                        del car_history_edge[vehicle_id][traci.vehicle.getRoute(vehicle_id)[-1]]
 
 
 
 
-                else:
-                    if current_time - recent_parking_vehicles[vehicle_id] > COOLDOWN_PERIOD:
-                        del recent_parking_vehicles[vehicle_id]
+                            #una volta che il veicolo è uscito dal parcheggio, lo indirizzo in una strada di uscita
+
+                            """from_edge_obj = net.getEdge(traci.vehicle.getLaneID(vehicle_id).split('_')[0])
+                            to_edge_obj = net.getEdge(exitLane)
+                            route = net.getShortestPath(from_edge_obj, to_edge_obj)
+                            path = route[0]
+                            edge_ids = [edge.getID() for edge in path]
+    
+                            traci.vehicle.setRoute(vehicle_id,edge_ids)"""
+                            traci.vehicle.changeTarget(vehicle_id,exitLane)
+                            traci.vehicle.setColor(vehicle_id, (0, 255, 0, 255))
+
+
+
+                    if vehicle_id not in recent_parking_vehicles:   #se il veicolo non ha lasciato un parcheggio da poco
+                        #traci.vehicle.setColor(vehicle_id, (255, 0, 0, 255))
+                        for parking_id in parking_list:
+                            # se il veicolo è abbastanza vicino al parcheggio
+                            if is_near_parkage(vehicle_id,parking_id,parking_to_edge) and vehicle_id not in parked_vehicles:
+                                if park_vehicle(vehicle_id, parking_id, parking_car_parked, parking_capacity, parked_vehicles):
+                                    print(f"Veicolo {vehicle_id} parcheggiato")
+                                else:
+                                    #print("Veicolo non parcheggiato: non vi è più spazio! Cerco nuovo parcheggio")
+
+                                    #trova il parcheggio libero più vicino
+                                    """nearestRoute = find_nearest_parkage(parking_id, parking_list,parking_to_edge,parking_capacity)
+                                    print(nearestRoute)
+                                    if nearestRoute != None:
+                                        path = nearestRoute[0]
+                                        edge_ids = [edge.getID() for edge in path]
+                                        print(edge_ids)
+                                        traci.vehicle.setRoute(vehicle_id, edge_ids)"""
+
+                        #logica di rerouting casuale
+                        destination_edge = traci.vehicle.getRoute(vehicle_id)[-1]
+                        if destination_edge != exitLane:
+                            # controllo se il veicolo è vicino ad una junction
+                            near_junction, junctionID = is_vehicle_near_junction(vehicle_id,net, 25)
+                            if near_junction:
+                                all_edges = traci.edge.getIDList()
+                                # Filtra per ottenere solo gli edge reali
+                                real_edges = [edge for edge in all_edges if not edge.startswith(':')]
+                                #print(f"{traci.vehicle.getLaneID(vehicle_id).split('_')[0]} {real_edges}")
+
+                                # se il veicolo non è sulla junction
+                                if traci.vehicle.getLaneID(vehicle_id).split('_')[0] in real_edges:
+
+                                    if recent_changed_route_cars.get(vehicle_id) == None:
+                                        #print(f"Vehicle {vehicle_id} is near junction {junctionID}")
+                                        # calcolo gli edge raggiungibili
+                                        laneID = traci.vehicle.getLaneID(vehicle_id)
+                                        reachable_edges = get_reachable_edges_from_lane(laneID)
+                                        #print(f"Vehicle {vehicle_id} on lane {laneID} can reach edges: {reachable_edges}")
+                                        if reachable_edges:
+                                            selected_lane, recent_changed_route_cars[
+                                                vehicle_id], pass_count = set_vehicle_route(vehicle_id, car_history_edge,
+                                                                                            reachable_edges)
+                                            #print(f"numero di passaggi: {pass_count}")
+                                            #print(f"Vehicle {vehicle_id} routed to lane {selected_lane}")
+
+
+
+
+                    else:
+                        if current_time - recent_parking_vehicles[vehicle_id] > COOLDOWN_PERIOD:
+                            del recent_parking_vehicles[vehicle_id]
 
 
 
