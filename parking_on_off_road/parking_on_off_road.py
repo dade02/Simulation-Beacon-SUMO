@@ -240,7 +240,7 @@ def random_point_on_map():
         # Iterare su tutti gli edge
         for edge in root.findall('edge'):
             # Iterare su tutte le lane all'interno dell'edge
-            if edge not in ENTRY_EXIT_LIST:
+            if edge.get("id") not in ENTRY_EXIT_LIST:
                 for lane in edge.findall('lane'):
                     # Ottenere il valore dell'attributo shape
                     shape = lane.get('shape')
@@ -250,14 +250,10 @@ def random_point_on_map():
                         for point in points:
                             x, y = map(float, point.split(','))
                             # Aggiornare i limiti
-                            if x < min_x:
-                                min_x = x
-                            if y < min_y:
-                                min_y = y
-                            if x > max_x:
-                                max_x = x
-                            if y > max_y:
-                                max_y = y
+                            min_x = min(min_x, x)
+                            min_y = min(min_y, y)
+                            max_x = max(max_x, x)
+                            max_y = max(max_y, y)
 
 
 
@@ -268,6 +264,12 @@ def random_point_on_map():
     # Generare un punto casuale all'interno dei limiti della mappa
     random_x = random.uniform(min_x, max_x)
     random_y = random.uniform(min_y, max_y)
+
+
+    # Generare randomicamente edge_id = None con una probabilità del 10%
+    if random.random() < 0.1:  # Probabilità del 10%
+        return (random_x, random_y), None
+
 
     # Ottenere l'edge più vicino al punto casuale
     edge_id = None
@@ -337,6 +339,8 @@ def set_vehicle_destinations():
         (x, y), edge_id = random_point_on_map()
         if edge_id:
             destinations.append([vehicle_id, edge_id, x, y])
+        else:
+            destinations.append([vehicle_id,"None"])
 
     # Scrivere le destinazioni nel file CSV
     with open(file_name, mode='w', newline='') as file:
@@ -370,6 +374,10 @@ def get_vehicle_destinations():
     return destinations
 
 #contiene il loop di controllo TraCI
+def see_heatMap(vehicle_id):
+    pass
+
+
 def run():
     set_vehicle_destinations()
     parking_list = traci.parkingarea.getIDList()  #lista parcheggi
@@ -433,6 +441,10 @@ def run():
 
         for vehicle_id in traci.vehicle.getIDList():
             #se il veicolo non è arrivato al punto b
+            if vehicle_id not in car_arrived_in_b and destinations[vehicle_id] == "None":
+                car_arrived_in_b.append(vehicle_id)
+                see_heatMap(vehicle_id)
+
             if vehicle_id not in car_arrived_in_b:
                 print(f"arrivo: {traci.vehicle.getRoute(vehicle_id)[-1]} newdest: {destinations[vehicle_id]}")
                 #se c'è arrivato ora
@@ -440,6 +452,11 @@ def run():
                     car_arrived_in_b.append(vehicle_id)
                 elif traci.vehicle.getRoute(vehicle_id)[-1] != destinations[vehicle_id]:
                     traci.vehicle.changeTarget(vehicle_id, destinations[vehicle_id])
+                    for edge in traci.vehicle.getRoute(vehicle_id):
+                        if edge not in car_history_edge[vehicle_id]:
+                           car_history_edge[vehicle_id][edge] = 0
+                        car_history_edge[vehicle_id][edge] += 1
+
                 traci.vehicle.setColor(vehicle_id, (255, 0, 0, 255))
             if vehicle_id in car_arrived_in_b:
                 if not is_vehicle_parked(vehicle_id):
