@@ -267,8 +267,14 @@ def random_point_on_map():
 
 
     # Generare randomicamente edge_id = None con una probabilità del 10%
+    #if random.random() < 0.1:  # Probabilità del 10%
+     #   return (random_x, random_y), None
+
+    # Generare randomicamente uso heatmap 10%
     if random.random() < 0.1:  # Probabilità del 10%
-        return (random_x, random_y), None
+        heatmap = True
+    else:
+        heatmap = False
 
 
     # Ottenere l'edge più vicino al punto casuale
@@ -296,7 +302,7 @@ def random_point_on_map():
                 edge_id = e
                 break
 
-    return (random_x, random_y), edge_id
+    return (random_x, random_y), edge_id,heatmap
 
 
 def get_vehicle_ids_from_xml(xml_file):
@@ -336,16 +342,17 @@ def set_vehicle_destinations():
 
     for vehicle_id in vehicle_ids:
         # Ottenere un punto casuale sulla mappa
-        (x, y), edge_id = random_point_on_map()
+        (x, y), edge_id,heat_map = random_point_on_map()
         if edge_id:
-            destinations.append([vehicle_id, edge_id, x, y])
+            destinations.append([vehicle_id, edge_id, x, y,heat_map])
         else:
+            print(f"Errore creazione destinazione veicolo {vehicle_id}")
             destinations.append([vehicle_id,"None"])
 
     # Scrivere le destinazioni nel file CSV
     with open(file_name, mode='w', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(['VehicleID', 'EdgeID', 'X', 'Y'])
+        writer.writerow(['VehicleID', 'EdgeID', 'X', 'Y','heatmap'])
         for destination in destinations:
             writer.writerow(destination)
 
@@ -364,14 +371,17 @@ def get_vehicle_destinations():
 
     # Legge le destinazioni dal file CSV
     destinations = {}
+    use_heatmap = {}
     with open(file_name, mode='r') as file:
         reader = csv.DictReader(file)
         for row in reader:
             vehicle_id = row['VehicleID']
             edge_id = row['EdgeID']
+            heat_map = row['heatmap']
             destinations[vehicle_id] = edge_id
+            use_heatmap[vehicle_id] = heat_map
 
-    return destinations
+    return destinations,use_heatmap
 
 #contiene il loop di controllo TraCI
 def see_heatMap(vehicle_id):
@@ -429,7 +439,7 @@ def run():
     exit_lane_list = []
     car_arrived_in_b = [] #lista di veicoli arrivati al loro punto B
 
-    destinations = get_vehicle_destinations() # punti B per ciascun veicolo
+    destinations,use_heatmap = get_vehicle_destinations() # punti B per ciascun veicolo
     print(destinations)
     net = sumolib.net.readNet("parking_on_off_road.net.xml")
 
@@ -440,10 +450,10 @@ def run():
 
 
         for vehicle_id in traci.vehicle.getIDList():
-            #se il veicolo non è arrivato al punto b
-            if vehicle_id not in car_arrived_in_b and destinations[vehicle_id] == "None":
-                car_arrived_in_b.append(vehicle_id)
-                see_heatMap(vehicle_id)
+            if use_heatmap[vehicle_id] == 'True':
+                print(f"veicolo {vehicle_id} usa la heatmap")
+                see_heatMap(vehicle_id) #dovrò cambiare la destinazione del veicolo in base alla heatmap
+                use_heatmap[vehicle_id] = False
 
             if vehicle_id not in car_arrived_in_b:
                 print(f"arrivo: {traci.vehicle.getRoute(vehicle_id)[-1]} newdest: {destinations[vehicle_id]}")
