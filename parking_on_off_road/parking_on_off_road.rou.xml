@@ -5,7 +5,7 @@
 
 
      <route id="route0" edges="-E2"/>
-    <flow id="carflow" type="car" brg="0" end="0" number="25" route="route0">
+    <flow id="carflow" type="car"  begin="0" end="100" number="50" route="route0">
     </flow>
 </routes>
 

@@ -237,7 +237,7 @@ class HeatMap:
         Stampa i valori all'interno di ciascuna cella della heatmap.
         """
         print("Heatmap Values:")
-        for i in range(self.rows):
+        for i in range(self.rows - 1, -1, -1):  # Inizia dall'ultima riga e vai verso la prima
             row_values = []
             for j in range(self.cols):
                 cell_value = sum(self.heat_map[i][j])
@@ -414,7 +414,9 @@ class HeatMap:
             posX, posY = self.get_coordinates_from_cell(best_row, best_col) #coordinate centrali cella
             nearest_lane = self.find_closest_lane(posX, posY) #lane più vicina alle coordinate
 
-            if nearest_lane:
+
+            #distanza stradale
+            """if nearest_lane:
                 lane_edge_id = traci.lane.getEdgeID(nearest_lane)
                 #print(f"lane:{edge_id}")
                 #print(f"nearest lane:{lane_edge_id}")
@@ -430,9 +432,33 @@ class HeatMap:
                     print(f"Errore nel calcolo del percorso: {e}")
                     continue
                 #print("Fine calcolo costo")
-                print(best_lane)
+                print(best_lane)"""
+
+            #distanza aerea
+            if nearest_lane:
+                lane_edge_id = traci.lane.getEdgeID(nearest_lane)
+
+                try:
+                    # Calcola la distanza aerea tra i due edge
+                    x1, y1 = net.getEdge(edge_id).getFromNode().getCoord()
+                    x2, y2 = net.getEdge(lane_edge_id).getFromNode().getCoord()
+                    air_distance = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+
+                    print(f"air distance: {air_distance} to {nearest_lane}")
+
+                    if air_distance < min_cost:
+                        min_cost = air_distance
+                        best_lane = nearest_lane
+
+                except Exception as e:
+                    print(f"Errore nel calcolo della distanza aerea: {e}")
+                    continue
+
+                print(f"best_lane: {best_lane}")
+
         if best_lane:
             traci.vehicle.changeTarget(vehicle_id, best_lane.split('_')[0])
+            destinations[vehicle_id] = best_lane.split('_')[0]
             print(f"Il veicolo {vehicle_id} è stato indirizzato verso la corsia più vicina: {best_lane}")
         else:
             print(f"Nessuna corsia valida trovata per il veicolo {vehicle_id}.")
@@ -650,7 +676,7 @@ def random_point_on_map():
      #   return (random_x, random_y), None
 
     # Generare randomicamente uso heatmap 10%
-    if random.random() < 0.3:  # Probabilità del 10%
+    if random.random() < 0.4:  # Probabilità del 10%
         heatmap = True
     else:
         heatmap = False
@@ -837,14 +863,14 @@ def run():
             if use_heatmap[vehicle_id] == 'True':
                 print(f"veicolo {vehicle_id} usa la heatmap")
                 heatmap.direct_vehicle_to_best_parking(vehicle_id,destinations)
-                use_heatmap[vehicle_id] = False
+                use_heatmap[vehicle_id] = None
 
             if vehicle_id not in car_arrived_in_b:
                 print(f"arrivo: {traci.vehicle.getRoute(vehicle_id)[-1]} newdest: {destinations[vehicle_id]}")
                 #se c'è arrivato ora
                 if traci.vehicle.getLaneID(vehicle_id).split('_')[0] == destinations[vehicle_id]:
                     car_arrived_in_b.append(vehicle_id)
-
+                    print(f"Veicolo {vehicle_id} arrivato a destinazione B" )
                 elif traci.vehicle.getRoute(vehicle_id)[-1] != destinations[vehicle_id]:
                     traci.vehicle.changeTarget(vehicle_id, destinations[vehicle_id])
                     for edge in traci.vehicle.getRoute(vehicle_id):
@@ -852,7 +878,7 @@ def run():
                            car_history_edge[vehicle_id][edge] = 0
                         car_history_edge[vehicle_id][edge] += 1
 
-                if use_heatmap[vehicle_id] == 'False':
+                if not use_heatmap[vehicle_id] == None:
                     traci.vehicle.setColor(vehicle_id, (255, 0, 0, 255)) #non usano heatmap
                 else:
                     traci.vehicle.setColor(vehicle_id, (255, 0, 255, 255))#usano heatmap
@@ -881,7 +907,7 @@ def run():
                             #print(f"veicolo {vehicle_id} uscito dal parcheggio {parked_vehicles[vehicle_id]}")
                             parking_car_parked[parked_vehicles[vehicle_id]] -= 1    #aggiorno il numero di veicoli parcheggiati
 
-                            if not use_heatmap[vehicle_id]: #se la usa (ho settato a False quelle che lo hanno usato)
+                            if use_heatmap[vehicle_id] == None: #se la usa (ho settato a None quelle che lo hanno usato)
                                 heatmap.update(parked_vehicles[vehicle_id], False)
 
                             del parked_vehicles[vehicle_id]                         #rimuovo da veicoli parcheggiati
@@ -926,7 +952,7 @@ def run():
                             if is_near_parkage(vehicle_id,parking_id,parking_to_edge) and vehicle_id not in parked_vehicles:
                                 if park_vehicle(vehicle_id, parking_id, parking_car_parked, parking_capacity, parked_vehicles):
                                     print(f"Veicolo {vehicle_id} parcheggiato")
-                                    if not use_heatmap[vehicle_id]:
+                                    if use_heatmap[vehicle_id] == None:
                                         heatmap.update(parked_vehicles[vehicle_id], True)
                                 else:
                                     #print("Veicolo non parcheggiato: non vi è più spazio! Cerco nuovo parcheggio")
