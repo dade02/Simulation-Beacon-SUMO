@@ -3,6 +3,8 @@ import math
 import optparse
 import os
 import sys
+from contextlib import nullcontext
+from xxlimited_35 import error
 
 #dobbiamo importare alcuni moduli da /tools di sumo
 if 'SUMO_HOME' in os.environ:
@@ -347,11 +349,10 @@ class HeatMap:
 
         return math.sqrt((px - proj_x) ** 2 + (py - proj_y) ** 2)
 
-    def find_best_parking_zones(self):
-        """
-        Trova le zone della mappa con la maggiore probabilità di parcheggio libero,
-        cercando la cella con la somma maggiore ma <= 0.
-        """
+    def find_best_parking_zones(self,preference,vehicle_id):
+        #filtro in base alle preferenze dei vari veicoli
+
+
         # Inizializza tutte le celle a 1
         cell_states = np.ones((self.rows, self.cols))
 
@@ -367,23 +368,48 @@ class HeatMap:
         print("heatmap intermedia")
         self.print_heatmap_values()
 
-        max_value = -1e10
-        for i in range(self.rows):
-            for j in range(self.cols):
-                if cell_states[i][j] > max_value and cell_states[i][j] <= 0:
-                    max_value = cell_states[i][j]
 
-        best_zones = []
 
-        # Cerca le celle con il valore massimo trovato
-        for i in range(self.rows):
-            for j in range(self.cols):
-                if cell_states[i][j] == max_value:
-                    best_zones.append((i, j))
+        best_zones = [] #tutte le possibili aree di parcheggio filtrate
 
+        if preference[vehicle_id] == 'find-possibility':
+            """
+            Trova le zone della mappa con la maggiore probabilità di parcheggio libero,
+            cercando la cella con la somma maggiore ma <= 0.
+            """
+            max_value = -1e10
+            for i in range(self.rows):
+                for j in range(self.cols):
+                    if cell_states[i][j] > max_value and cell_states[i][j] <= 0:
+                        max_value = cell_states[i][j]
+
+
+            # Cerca le celle con il valore massimo trovato
+            for i in range(self.rows):
+                for j in range(self.cols):
+                    if cell_states[i][j] == max_value:
+                        best_zones.append((i, j))
+
+            print(f"Veicolo {vehicle_id} settaggio destinazione con preferenza find-possibility" )
+
+        elif preference[vehicle_id] == 'distance':
+            #inserisce tutti i parcheggi segnati
+
+            for i in range(self.rows):
+                for j in range(self.cols):
+                    #inserisco tutti i parcheggi segnati sulla heatmap fino ad ora
+                    if cell_states[i][j] != 1:
+                        best_zones.append((i, j))
+
+            print(f"Veicolo {vehicle_id} settaggio destinazione con preferenza distance" )
+        else:
+            print("Errore settaggio file")
+            return None
+
+        print(f"possibili destinazioni: {best_zones}")
         return best_zones
 
-    def direct_vehicle_to_best_parking(self, vehicle_id, destinations):
+    def direct_vehicle_to_best_parking(self, vehicle_id, destinations,preference):
         """
         Dirige il veicolo verso la corsia (lane) con la maggiore probabilità di trovare un parcheggio libero,
         prendendo in considerazione la destinazione attuale (edge_id) del veicolo.
@@ -398,7 +424,7 @@ class HeatMap:
             print(f"Nessuna destinazione trovata per il veicolo con ID {vehicle_id}.")
             return
 
-        best_zones = self.find_best_parking_zones()
+        best_zones = self.find_best_parking_zones(preference,vehicle_id)
 
         if not best_zones:
             print("Nessuna area libera identificata. Non è possibile indirizzare il veicolo.")
@@ -563,7 +589,7 @@ def is_vehicle_near_junction(vehID, net, threshold_distance=20.0):
 
     # Verifica se il veicolo è entro la soglia di distanza dalla prossima junction
     if distance <= threshold_distance:
-        print(f"Veicolo {vehID} vicino alla prossima junction {next_junction_id}")
+        #print(f"Veicolo {vehID} vicino alla prossima junction {next_junction_id}")
         return True, next_junction_id
 
     return False, None
@@ -676,7 +702,7 @@ def random_point_on_map():
      #   return (random_x, random_y), None
 
     # Generare randomicamente uso heatmap 10%
-    if random.random() < 0.4:  # Probabilità del 10%
+    if random.random() < 0.6:  # Probabilità del 10%
         heatmap = True
     else:
         heatmap = False
@@ -685,7 +711,7 @@ def random_point_on_map():
     # Ottenere l'edge più vicino al punto casuale
     edge_id = None
     while edge_id == None or edge_id in ENTRY_EXIT_LIST:
-        print(f"edge id: {edge_id}")
+        #print(f"edge id: {edge_id}")
         try:
             random_x = random.uniform(min_x, max_x)
             random_y = random.uniform(min_y, max_y)
@@ -698,7 +724,7 @@ def random_point_on_map():
     # Verificare se l'edge_id è quello di una junction e trovare un edge connesso
     if edge_id and edge_id.startswith(':'):
         for edge in root.findall('edge'):
-            print(f"to: {edge.get('to')}, current {(edge_id.split('_')[0])[1:]}")
+            #print(f"to: {edge.get('to')}, current {(edge_id.split('_')[0])[1:]}")
             if edge.get("to") == (edge_id.split('_')[0])[1:]:
                 connected_edges.append(edge.get("id"))
 
@@ -707,7 +733,17 @@ def random_point_on_map():
                 edge_id = e
                 break
 
-    return (random_x, random_y), edge_id,heatmap
+
+    if heatmap == True:
+        if random.random() < 0.5:
+            preference = "distance"
+        else:
+            preference = "find-possibility"
+    else:
+        preference = None
+
+
+    return (random_x, random_y), edge_id,heatmap,preference
 
 
 def get_vehicle_ids_from_xml(xml_file):
@@ -747,9 +783,9 @@ def set_vehicle_destinations():
 
     for vehicle_id in vehicle_ids:
         # Ottenere un punto casuale sulla mappa
-        (x, y), edge_id,heat_map = random_point_on_map()
+        (x, y), edge_id, heat_map, preference = random_point_on_map()
         if edge_id:
-            destinations.append([vehicle_id, edge_id, x, y,heat_map])
+            destinations.append([vehicle_id, edge_id, x, y,heat_map,preference])
         else:
             print(f"Errore creazione destinazione veicolo {vehicle_id}")
             destinations.append([vehicle_id,"None"])
@@ -757,7 +793,7 @@ def set_vehicle_destinations():
     # Scrivere le destinazioni nel file CSV
     with open(file_name, mode='w', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(['VehicleID', 'EdgeID', 'X', 'Y','heatmap'])
+        writer.writerow(['VehicleID', 'EdgeID', 'X', 'Y','heatmap','preference'])
         for destination in destinations:
             writer.writerow(destination)
 
@@ -777,6 +813,7 @@ def get_vehicle_destinations():
     # Legge le destinazioni dal file CSV
     destinations = {}
     use_heatmap = {}
+    preference = {}
     with open(file_name, mode='r') as file:
         reader = csv.DictReader(file)
         for row in reader:
@@ -785,8 +822,9 @@ def get_vehicle_destinations():
             heat_map = row['heatmap']
             destinations[vehicle_id] = edge_id
             use_heatmap[vehicle_id] = heat_map
+            preference[vehicle_id] = row['preference']
 
-    return destinations,use_heatmap
+    return destinations,use_heatmap,preference
 
 
 
@@ -839,11 +877,11 @@ def run():
     recent_changed_route_cars = {}
     REROUTE_PERIOD = 10000
 
-    exit_lane_list = []
+    #exit_lane_list = []
     car_arrived_in_b = [] #lista di veicoli arrivati al loro punto B
 
-    destinations,use_heatmap = get_vehicle_destinations() # punti B per ciascun veicolo
-    print(destinations)
+    destinations,use_heatmap,preference = get_vehicle_destinations() # punti B per ciascun veicolo
+    #print(destinations)
     net = sumolib.net.readNet("parking_on_off_road.net.xml")
 
     print("INIZIO HEATMAP")
@@ -862,15 +900,15 @@ def run():
         for vehicle_id in traci.vehicle.getIDList():
             if use_heatmap[vehicle_id] == 'True':
                 print(f"veicolo {vehicle_id} usa la heatmap")
-                heatmap.direct_vehicle_to_best_parking(vehicle_id,destinations)
+                heatmap.direct_vehicle_to_best_parking(vehicle_id,destinations,preference)
                 use_heatmap[vehicle_id] = None
 
             if vehicle_id not in car_arrived_in_b:
-                print(f"arrivo: {traci.vehicle.getRoute(vehicle_id)[-1]} newdest: {destinations[vehicle_id]}")
+                #print(f"arrivo: {traci.vehicle.getRoute(vehicle_id)[-1]} newdest: {destinations[vehicle_id]}")
                 #se c'è arrivato ora
                 if traci.vehicle.getLaneID(vehicle_id).split('_')[0] == destinations[vehicle_id]:
                     car_arrived_in_b.append(vehicle_id)
-                    print(f"Veicolo {vehicle_id} arrivato a destinazione B" )
+                    #print(f"Veicolo {vehicle_id} arrivato a destinazione B" )
                 elif traci.vehicle.getRoute(vehicle_id)[-1] != destinations[vehicle_id]:
                     traci.vehicle.changeTarget(vehicle_id, destinations[vehicle_id])
                     for edge in traci.vehicle.getRoute(vehicle_id):
@@ -887,8 +925,8 @@ def run():
                 if not is_vehicle_parked(vehicle_id):
 
                     #lista di veicoli che stanno uscendo
-                    if traci.vehicle.getRoadID(vehicle_id) == exitLane and vehicle_id not in exit_lane_list:
-                        exit_lane_list.append(vehicle_id)
+                    #if traci.vehicle.getRoadID(vehicle_id) == exitLane and vehicle_id not in exit_lane_list:
+                    #    exit_lane_list.append(vehicle_id)
 
                     if recent_changed_route_cars.get(vehicle_id) != None and current_time - recent_changed_route_cars[vehicle_id] > REROUTE_PERIOD:
                         del recent_changed_route_cars[vehicle_id]
@@ -898,8 +936,8 @@ def run():
                         #se sono alla destinazione
                         if traci.vehicle.getRoadID(vehicle_id) == traci.vehicle.getRoute(vehicle_id)[-1]:
                             del recent_changed_route_cars[vehicle_id]
-                            print(f"Il veicolo {vehicle_id} può di nuovo cambiare rotta")
-                            print(f"occorrenze: { car_history_edge[vehicle_id]}")
+                           #print(f"Il veicolo {vehicle_id} può di nuovo cambiare rotta")
+                            #print(f"occorrenze: { car_history_edge[vehicle_id]}")
 
 
                     if vehicle_id in parked_vehicles:
@@ -917,16 +955,16 @@ def run():
 
                             # cancello ultimo reroute se esiste
                             # se la destinazione non è la lane dove vi è adesso il veicolo
-                            print(
-                                f"veicolo {vehicle_id} strada {traci.vehicle.getLaneID(vehicle_id).split('_')[0]} dest {traci.vehicle.getRoute(vehicle_id)[-1]}")
+                            #print(
+                                #f"veicolo {vehicle_id} strada {traci.vehicle.getLaneID(vehicle_id).split('_')[0]} dest {traci.vehicle.getRoute(vehicle_id)[-1]}")
 
                             if traci.vehicle.getRoute(vehicle_id)[-1] != traci.vehicle.getLaneID(vehicle_id).split('_')[0]:
-                                if traci.vehicle.getRoute(vehicle_id)[-1] != exitLane:
-                                    print(
-                                        f"la destinazione {traci.vehicle.getRoute(vehicle_id)[-1]} per il veicolo {vehicle_id} è da eliminare")
-                                    car_history_edge[vehicle_id][traci.vehicle.getRoute(vehicle_id)[-1]] -= 1
-                                    if car_history_edge[vehicle_id][traci.vehicle.getRoute(vehicle_id)[-1]] == 0:
-                                        del car_history_edge[vehicle_id][traci.vehicle.getRoute(vehicle_id)[-1]]
+                                #if traci.vehicle.getRoute(vehicle_id)[-1] != exitLane:
+                                    #print(
+                                     #   f"la destinazione {traci.vehicle.getRoute(vehicle_id)[-1]} per il veicolo {vehicle_id} è da eliminare")
+                                car_history_edge[vehicle_id][traci.vehicle.getRoute(vehicle_id)[-1]] -= 1
+                                if car_history_edge[vehicle_id][traci.vehicle.getRoute(vehicle_id)[-1]] == 0:
+                                    del car_history_edge[vehicle_id][traci.vehicle.getRoute(vehicle_id)[-1]]
 
 
 
@@ -951,7 +989,7 @@ def run():
                             # se il veicolo è abbastanza vicino al parcheggio
                             if is_near_parkage(vehicle_id,parking_id,parking_to_edge) and vehicle_id not in parked_vehicles:
                                 if park_vehicle(vehicle_id, parking_id, parking_car_parked, parking_capacity, parked_vehicles):
-                                    print(f"Veicolo {vehicle_id} parcheggiato")
+                                    #print(f"Veicolo {vehicle_id} parcheggiato")
                                     if use_heatmap[vehicle_id] == None:
                                         heatmap.update(parked_vehicles[vehicle_id], True)
                                 else:
@@ -1004,16 +1042,16 @@ def run():
 
 
     traci.close()
-    heatmap.print_heatmap()
-    heatmap.print_heatmap_values()
+    #heatmap.print_heatmap()
+    #heatmap.print_heatmap_values()
     heatmap.save_heatmap_to_image('heatmap.jpg')
 
 
-    print(f"Numero veicoli usciti: {len(exit_lane_list)}")
-    print(sorted(exit_lane_list, key=estrai_numero))
-    print("Storico passaggi veicoli")
-    for v in car_history_edge:
-        print(f"veicolo {v} : edges {car_history_edge[v]}")
+    #print(f"Numero veicoli usciti: {len(exit_lane_list)}")
+    #print(sorted(exit_lane_list, key=estrai_numero))
+    #print("Storico passaggi veicoli")
+    #for v in car_history_edge:
+    #    print(f"veicolo {v} : edges {car_history_edge[v]}")
 
 
 
