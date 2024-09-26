@@ -41,56 +41,70 @@ def get_parking_coordinates(parking_id, additional_file):
     - additional_file: Il percorso del file aggiuntivo (additional.xml).
 
     Restituisce:
-    - Una tupla con le coordinate del parcheggio (x, y).
+    - Una tupla con le coordinate del parcheggio (x, y) o None se non trovato.
     """
-    # Assicurati che TraCI sia già avviato e connesso
+    import xml.etree.ElementTree as ET  # Importa il modulo per la gestione dell'XML
 
-    # Analizza il file aggiuntivo per ottenere le informazioni sul parcheggio
-    tree_additional = ET.parse(additional_file)
-    root_additional = tree_additional.getroot()
+    try:
+        # Analizza il file aggiuntivo per ottenere le informazioni sul parcheggio
+        tree_additional = ET.parse(additional_file)
+        root_additional = tree_additional.getroot()
 
-    # Trova il parcheggio specificato
-    parking_area = root_additional.find(f".//parkingArea[@id='{parking_id}']")
-    if parking_area is not None:
+        # Trova il parcheggio specificato
+        parking_area = root_additional.find(f".//parkingArea[@id='{parking_id}']")
+        if parking_area is None:
+            #print(f"ParkingArea with ID {parking_id} not found in {additional_file}")
+            return None
+
         lane_id = parking_area.get("lane")
         start_pos = float(parking_area.get("startPos"))
         end_pos = float(parking_area.get("endPos"))
 
+        # Debugging
+        #(f"Found parking area: Lane ID: {lane_id}, Start Position: {start_pos}, End Position: {end_pos}")
+
         # Ottieni le coordinate della corsia
         lane_coords = traci.lane.getShape(lane_id)
-        if lane_coords:
-            # Calcola le coordinate del parcheggio
-            parking_coords = []
+        if not lane_coords:
+            #print(f"No coordinates found for lane {lane_id}")
+            return None
 
-            # Il calcolo delle coordinate dei parcheggi è lineare
-            for i in range(len(lane_coords) - 1):
-                x1, y1 = lane_coords[i]
-                x2, y2 = lane_coords[i + 1]
-                segment_length = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
+        #print(f"Lane coordinates: {lane_coords}")
 
-                # Verifica se il parcheggio è all'interno del segmento considerato
-                if start_pos < (i + 1) * segment_length and end_pos > i * segment_length:
-                    # Calcola la posizione del parcheggio su questo segmento
-                    if segment_length > 0:
-                        proportion_start = (start_pos - i * segment_length) / segment_length
-                        proportion_end = (end_pos - i * segment_length) / segment_length
+        # Calcola le coordinate del parcheggio
+        parking_coords = []
 
-                        x_start = x1 + (x2 - x1) * proportion_start
-                        y_start = y1 + (y2 - y1) * proportion_start
-                        x_end = x1 + (x2 - x1) * proportion_end
-                        y_end = y1 + (y2 - y1) * proportion_end
+        for i in range(len(lane_coords) - 1):
+            x1, y1 = lane_coords[i]
+            x2, y2 = lane_coords[i + 1]
+            segment_length = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
 
-                        # Aggiungi solo il primo punto calcolato
-                        parking_coords.append((x_start, y_start))
-                        break  # Esci dal ciclo dopo aver trovato la prima coordinata
+            # Verifica se il parcheggio è all'interno del segmento
+            if start_pos < (i + 1) * segment_length and end_pos > i * segment_length:
+                if segment_length > 0:
+                    proportion_start = (start_pos - i * segment_length) / segment_length
+                    proportion_end = (end_pos - i * segment_length) / segment_length
 
-            # Restituisci la prima coordinata trovata
-            if parking_coords:
-                return parking_coords[0]
+                    x_start = x1 + (x2 - x1) * proportion_start
+                    y_start = y1 + (y2 - y1) * proportion_start
+                    x_end = x1 + (x2 - x1) * proportion_end
+                    y_end = y1 + (y2 - y1) * proportion_end
 
+                    # Aggiungi solo il primo punto calcolato
+                    #print(f"aggiunto {x_start}")
+                    parking_coords.append((x_start, y_start))
+                    break  # Esci dal ciclo dopo aver trovato la prima coordinata
+
+        # Restituisci la prima coordinata trovata
+        if parking_coords:
+            #print("ritorna coordinate")
+            return parking_coords[0]
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+    #print(f"ritorna none per il parcheggio {parking_id}")
     return None  # Restituisci None se non trovi il parcheggio
-
-
 
 
 class HeatMap:
@@ -110,7 +124,7 @@ class HeatMap:
 
         # Ottieni i confini della rete automaticamente
         (self.minX, self.minY), (self.maxX, self.maxY) = traci.simulation.getNetBoundary()
-        print(f"Net Boundaries: minX={self.minX}, minY={self.minY}, maxX={self.maxX}, maxY={self.maxY}")
+        #print(f"Net Boundaries: minX={self.minX}, minY={self.minY}, maxX={self.maxX}, maxY={self.maxY}")
 
         # Regola i confini per includere tutti i parcheggi
         self._expand_boundaries_for_parking(additional_file)
@@ -166,26 +180,47 @@ class HeatMap:
         dimensione_area = float(root.find('dimensione_area').text)
         return dimensione_area
 
-    def update(self, parked_id, parkage):
-        """
-        Aggiorna la heatmap in base alla posizione del parcheggio e allo stato di parkage.
-        """
+    def update(self,parkage,parked_id = None, real_parkages = False):
+        #caso heatmap
+        if not real_parkages:
 
-        posX, posY = get_parking_coordinates(parked_id, 'parking_on_off_road.add.xml')
+            """
+            Aggiorna la heatmap in base alla posizione del parcheggio e allo stato di parkage.
+            """
 
+            posX, posY = get_parking_coordinates(parked_id, 'parking_on_off_road.add.xml')
 
-        # Calcola gli indici della matrice per la posizione del veicolo
-        col_index = math.floor((posX - self.minX) / self.dimensione_area)
-        row_index = math.floor((posY - self.minY) / self.dimensione_area)
+            # Calcola gli indici della matrice per la posizione del veicolo
+            col_index = math.floor((posX - self.minX) / self.dimensione_area)
+            row_index = math.floor((posY - self.minY) / self.dimensione_area)
 
-        # Verifica che gli indici siano all'interno dei limiti della matrice
-        if 0 <= col_index < self.cols and 0 <= row_index < self.rows:
-            if not parkage:
-                self.heat_map[row_index][col_index].append(1)
-            else:
-                self.heat_map[row_index][col_index].append(-1)
+            # Verifica che gli indici siano all'interno dei limiti della matrice
+            if 0 <= col_index < self.cols and 0 <= row_index < self.rows:
+                if not parkage:
+                    self.heat_map[row_index][col_index].append(1)
+                else:
+                    self.heat_map[row_index][col_index].append(-1)
+        #caso mappa parcheggi reali
+        else:
+            """
+            Trovo tutti i parcheggi nella rete stradale 
+            """
+            tree_additional = ET.parse('parking_on_off_road.add.xml')
+            root_additional = tree_additional.getroot()
 
-    def print_heatmap(self, title="Heatmap"):
+            # Trova tutti gli elementi 'parkingArea'
+            for parking_area in root_additional.findall(".//parkingArea"):
+                parking_id = parking_area.get("id")
+                posX, posY = get_parking_coordinates(parking_id, 'parking_on_off_road.add.xml')
+                # Calcola gli indici della matrice per la posizione del veicolo
+                col_index = math.floor((posX - self.minX) / self.dimensione_area)
+                row_index = math.floor((posY - self.minY) / self.dimensione_area)
+
+                # Verifica che gli indici siano all'interno dei limiti della matrice
+                if 0 <= col_index < self.cols and 0 <= row_index < self.rows:
+                    self.heat_map[row_index][col_index].append(1)
+
+    def print_heatmap(self, title="Heatmap",real_parkage=False):
         """
         Stampa la heatmap utilizzando Matplotlib, colorando solo le celle con liste non vuote.
 
@@ -213,9 +248,15 @@ class HeatMap:
 
         # Aggiungi una barra di colore per la heatmap
         cbar = plt.colorbar(cax, ticks=[0, 1])
-        cbar.set_label('Presenza di veicoli')
+
+        if not real_parkage:
+            cbar.set_label('Presenza di veicoli')
+        else:
+            cbar.set_label('Presenza di parcheggi')
         cbar.set_ticks([0, 1])
-        cbar.set_ticklabels(['Nessun Dato', 'Dato'])
+
+        if not real_parkage:
+            cbar.set_ticklabels(['Nessun parcheggio', 'Parcheggio'])
 
         # Aggiungi un bordo ai confini della griglia
         for i in range(self.rows + 1):
@@ -246,11 +287,11 @@ class HeatMap:
                 row_values.append(f"{cell_value:4d}")
             print(" ".join(row_values))
 
-        for i in range(self.rows):
+        """for i in range(self.rows):
             for j in range(self.cols):
                 print(f"elemento heatmap[{i}][{j}] : {self.heat_map[i][j]}")
-
-    def save_heatmap_to_image(self, file_path, title="Heatmap"):
+        """
+    def save_heatmap_to_image(self, file_path, title="Heatmap",real_parkage=False):
         """
         Salva la heatmap come un file immagine.
 
@@ -278,10 +319,18 @@ class HeatMap:
         cax = plt.imshow(display_matrix, cmap=cmap, norm=norm, interpolation='nearest',origin='lower')
 
         # Aggiungi una barra di colore per la heatmap
-        cbar = plt.colorbar(cax, ticks=[0, 1])
-        cbar.set_label('Presenza di veicoli')
-        cbar.set_ticks([0, 1])
-        cbar.set_ticklabels(['Nessun Dato', 'Dato'])
+        if not real_parkage:
+            cbar = plt.colorbar(cax, ticks=[0, 1])
+            cbar.set_label('Presenza di veicoli')
+            cbar.set_ticks([0, 1])
+            cbar.set_ticklabels(['Nessun Dato', 'Dato'])
+        else:
+            cbar = plt.colorbar(cax, ticks=['No', 'Yes'])
+            cbar.set_label('Presenza di parcheggi')
+            cbar.set_ticks([0,1])
+            cbar.set_ticklabels(['Nessun Parcheggio', 'Parcheggio'])
+
+
 
         # Aggiungi un bordo ai confini della griglia
         for i in range(self.rows + 1):
@@ -299,7 +348,7 @@ class HeatMap:
         # Chiudi la figura per liberare la memoria
         plt.close()
 
-        print(f"Heatmap salvata come immagine in {file_path}")
+        #print(f"Heatmap salvata come immagine in {file_path}")
 
 
 
@@ -365,12 +414,13 @@ class HeatMap:
                     cell_states[i][j] = 1 #fuori considerazione
 
 
-        print("heatmap intermedia")
-        self.print_heatmap_values()
+        #print("heatmap intermedia")
+        #self.print_heatmap_values()
 
 
 
         best_zones = [] #tutte le possibili aree di parcheggio filtrate
+
 
         if preference[vehicle_id] == 'find-possibility':
             """
@@ -390,7 +440,8 @@ class HeatMap:
                     if cell_states[i][j] == max_value:
                         best_zones.append((i, j))
 
-            print(f"Veicolo {vehicle_id} settaggio destinazione con preferenza find-possibility" )
+            #print(f"Veicolo {vehicle_id} settaggio destinazione con preferenza find-possibility" )
+
 
         elif preference[vehicle_id] == 'distance':
             #inserisce tutti i parcheggi segnati
@@ -401,12 +452,12 @@ class HeatMap:
                     if cell_states[i][j] != 1:
                         best_zones.append((i, j))
 
-            print(f"Veicolo {vehicle_id} settaggio destinazione con preferenza distance" )
+            #print(f"Veicolo {vehicle_id} settaggio destinazione con preferenza distance" )
         else:
-            print("Errore settaggio file")
+            #print("Errore settaggio file")
             return None
 
-        print(f"possibili destinazioni: {best_zones}")
+        #print(f"possibili destinazioni: {best_zones}")
         return best_zones
 
     def direct_vehicle_to_best_parking(self, vehicle_id, destinations,preference):
@@ -421,13 +472,13 @@ class HeatMap:
         edge_id = destinations.get(vehicle_id)
 
         if edge_id is None:
-            print(f"Nessuna destinazione trovata per il veicolo con ID {vehicle_id}.")
+            #print(f"Nessuna destinazione trovata per il veicolo con ID {vehicle_id}.")
             return
 
         best_zones = self.find_best_parking_zones(preference,vehicle_id)
 
         if not best_zones:
-            print("Nessuna area libera identificata. Non è possibile indirizzare il veicolo.")
+            #print("Nessuna area libera identificata. Non è possibile indirizzare il veicolo.")
             return
 
         best_lane = None
@@ -440,26 +491,6 @@ class HeatMap:
             posX, posY = self.get_coordinates_from_cell(best_row, best_col) #coordinate centrali cella
             nearest_lane = self.find_closest_lane(posX, posY) #lane più vicina alle coordinate
 
-
-            #distanza stradale
-            """if nearest_lane:
-                lane_edge_id = traci.lane.getEdgeID(nearest_lane)
-                #print(f"lane:{edge_id}")
-                #print(f"nearest lane:{lane_edge_id}")
-                try:
-                    # Calcola il percorso ottimale usando getOptimalPath
-                    route, cost = net.getOptimalPath(net.getEdge(edge_id),net.getEdge(lane_edge_id))
-                    print(f"route:{route},cost:{cost}")
-                    if route is not None:
-                        if cost < min_cost:
-                            min_cost = cost
-                            best_lane = nearest_lane
-                except Exception as e:
-                    print(f"Errore nel calcolo del percorso: {e}")
-                    continue
-                #print("Fine calcolo costo")
-                print(best_lane)"""
-
             #distanza aerea
             if nearest_lane:
                 lane_edge_id = traci.lane.getEdgeID(nearest_lane)
@@ -470,17 +501,17 @@ class HeatMap:
                     x2, y2 = net.getEdge(lane_edge_id).getFromNode().getCoord()
                     air_distance = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
-                    print(f"air distance: {air_distance} to {nearest_lane}")
+                    #print(f"air distance: {air_distance} to {nearest_lane} da {edge_id}")
 
                     if air_distance < min_cost:
                         min_cost = air_distance
                         best_lane = nearest_lane
 
                 except Exception as e:
-                    print(f"Errore nel calcolo della distanza aerea: {e}")
+                    #print(f"Errore nel calcolo della distanza aerea: {e}")
                     continue
 
-                print(f"best_lane: {best_lane}")
+                #print(f"best_lane: {best_lane}")
 
         if best_lane:
             traci.vehicle.changeTarget(vehicle_id, best_lane.split('_')[0])
@@ -488,6 +519,9 @@ class HeatMap:
             print(f"Il veicolo {vehicle_id} è stato indirizzato verso la corsia più vicina: {best_lane}")
         else:
             print(f"Nessuna corsia valida trovata per il veicolo {vehicle_id}.")
+
+
+
 
 def is_vehicle_parked(vehicle_id):
     stop_state = traci.vehicle.getStopState(vehicle_id)
@@ -500,6 +534,7 @@ def is_near_parkage(vehicle_id,parkage_id,parking_to_edge):
         park_end = traci.parkingarea.getEndPos(parkage_id)
 
         if vehicle_position > park_start - 15 and vehicle_position < park_end - 15:
+           #print(f"veicolo {vehicle_id} vicino al parcheggio {parkage_id}")
            return True
 
     return False
@@ -507,13 +542,10 @@ def is_near_parkage(vehicle_id,parkage_id,parking_to_edge):
 def park_vehicle(vehicle_id, parkage_id, parking_car_parked, parking_capacity, parked_vehicles):
     occupied_count = parking_car_parked[parkage_id]
     capacity = parking_capacity[parkage_id]
-    """print("-----------------------------")
-    print(f"veicolo: {vehicle_id}")
-    print(f"capacità parcheggio: {capacity}, numero posti occupati: {occupied_count}")
-    print("-----------------------------")"""
+
 
     if occupied_count < capacity:
-        # print("C' è spazio")
+        print("C' è spazio")
         traci.vehicle.setParkingAreaStop(vehicle_id, parkage_id, 40)  # 10 è la durata della sosta
         parking_car_parked[parkage_id] += 1
         parked_vehicles[vehicle_id] = parkage_id
@@ -569,10 +601,10 @@ def is_vehicle_near_junction(vehID, net, threshold_distance=20.0):
         # Ottieni l'ID della junction di destinazione dell'edge corrente
         next_junction_id = net.getEdge(current_edge).getToNode().getID()
 
-        print(f"Next Junction ID: {next_junction_id}")
+        #print(f"veicolo  {vehID} Next Junction ID: {next_junction_id}")
 
         if not next_junction_id:
-            print(f"Nessuna junction trovata per l'edge {current_edge}")
+            #print(f"Nessuna junction trovata per l'edge {current_edge}")
             return False, None
 
         # Ottieni la posizione della prossima junction
@@ -666,7 +698,7 @@ def random_point_on_map():
     NET_FILE = "parking_on_off_road.net.xml"
     tree = ET.parse(NET_FILE)
     root = tree.getroot()
-    ENTRY_EXIT_LIST = ["E1","-E1","E2","-E2"]
+    ENTRY_EXIT_LIST = ["E85","-E85","E86","-E86"]
     try:
         # Iterare su tutti gli edge
         for edge in root.findall('edge'):
@@ -701,8 +733,8 @@ def random_point_on_map():
     #if random.random() < 0.1:  # Probabilità del 10%
      #   return (random_x, random_y), None
 
-    # Generare randomicamente uso heatmap 10%
-    if random.random() < 0.6:  # Probabilità del 10%
+    # Generare randomicamente uso heatmap 40%
+    if random.random() < 0.7:  # Probabilità del 40%
         heatmap = True
     else:
         heatmap = False
@@ -830,6 +862,14 @@ def get_vehicle_destinations():
 
 
 def run():
+    parkage_map = HeatMap(xml_file='heat_map.xml', additional_file='parking_on_off_road.add.xml')
+    parkage_map.update(True, real_parkages=True)
+    parkage_map.print_heatmap_values()
+    # salva mappa parcheggi reali
+    parkage_map.save_heatmap_to_image('real_parkages.jpg', 'parcheggi reali', True)
+
+
+
     set_vehicle_destinations()
     parking_list = traci.parkingarea.getIDList()  #lista parcheggi
 
@@ -869,7 +909,7 @@ def run():
         parking_car_parked[parking] = 0
 
     COOLDOWN_PERIOD = 10000 # differenza di tempo tra un parcheggio ed un altro (di fatto non riparcheggia più)
-    exitLane = 'E1'
+    exitLane = 'E86'
 
     #per ogni veicolo tengo traccia di quante volte ha percorso un edge
     car_history_edge = defaultdict(dict)
@@ -887,9 +927,12 @@ def run():
     print("INIZIO HEATMAP")
 
     heatmap = HeatMap(xml_file='heat_map.xml',additional_file='parking_on_off_road.add.xml')
-
-
     print("FINE HEATMAP")
+
+
+    print('Mappa parcheggi')
+
+    print('Fine Mappa parcheggi')
 
 
     while traci.simulation.getMinExpectedNumber() > 0:
@@ -946,7 +989,7 @@ def run():
                             parking_car_parked[parked_vehicles[vehicle_id]] -= 1    #aggiorno il numero di veicoli parcheggiati
 
                             if use_heatmap[vehicle_id] == None: #se la usa (ho settato a None quelle che lo hanno usato)
-                                heatmap.update(parked_vehicles[vehicle_id], False)
+                                heatmap.update(False,parked_vehicles[vehicle_id] )
 
                             del parked_vehicles[vehicle_id]                         #rimuovo da veicoli parcheggiati
                             recent_parking_vehicles[vehicle_id] = current_time      #aggiungo a veicoli usciti da poco
@@ -989,9 +1032,9 @@ def run():
                             # se il veicolo è abbastanza vicino al parcheggio
                             if is_near_parkage(vehicle_id,parking_id,parking_to_edge) and vehicle_id not in parked_vehicles:
                                 if park_vehicle(vehicle_id, parking_id, parking_car_parked, parking_capacity, parked_vehicles):
-                                    #print(f"Veicolo {vehicle_id} parcheggiato")
+                                    print(f"Veicolo {vehicle_id} parcheggiato")
                                     if use_heatmap[vehicle_id] == None:
-                                        heatmap.update(parked_vehicles[vehicle_id], True)
+                                        heatmap.update(True, parked_vehicles[vehicle_id] )
                                 else:
                                     #print("Veicolo non parcheggiato: non vi è più spazio! Cerco nuovo parcheggio")
 
@@ -1042,9 +1085,10 @@ def run():
 
 
     traci.close()
-    #heatmap.print_heatmap()
-    #heatmap.print_heatmap_values()
+
+    #salva heatmap
     heatmap.save_heatmap_to_image('heatmap.jpg')
+
 
 
     #print(f"Numero veicoli usciti: {len(exit_lane_list)}")

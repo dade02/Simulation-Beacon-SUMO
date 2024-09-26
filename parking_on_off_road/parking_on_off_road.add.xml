@@ -1,38 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2024-07-12 12:51:38 by Eclipse SUMO netedit Version 1.15.0
+<!-- generated on 2024-09-18 10:34:21 by Eclipse SUMO netedit Version v1_20_0+2013-dea7f8276dd
 -->
 
 <additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
     <!-- StoppingPlaces -->
-    <parkingArea id="pa_1" lane="E12_0" startPos="49.60" endPos="59.60" roadsideCapacity="3"/>
-    <parkingArea id="pa_0" lane="E16_0" startPos="34.61" endPos="44.61" roadsideCapacity="2"/>
-    <parkingArea id="pa_10" lane="E9_0" startPos="28.91" endPos="38.91" roadsideCapacity="1"/>
-    <parkingArea id="pa_11" lane="-E13_0" startPos="15.40" endPos="25.40" roadsideCapacity="1"/>
-    <parkingArea id="pa_12" lane="E11_0" startPos="13.00" endPos="23.00" roadsideCapacity="1"/>
-    <parkingArea id="pa_13" lane="-E11_0" startPos="14.93" endPos="24.93" roadsideCapacity="1"/>
-    <parkingArea id="pa_17" lane="E13_0" startPos="12.17" endPos="22.17" roadsideCapacity="1"/>
-    <parkingArea id="pa_2" lane="E3_0" startPos="26.44" endPos="36.44" roadsideCapacity="1"/>
-    <parkingArea id="pa_3" lane="E5_0" startPos="31.58" endPos="41.58" roadsideCapacity="1"/>
-    <parkingArea id="pa_4" lane="-E5_0" startPos="33.96" endPos="43.96" roadsideCapacity="1"/>
-    <parkingArea id="pa_5" lane="-E9_0" startPos="32.55" endPos="42.55" roadsideCapacity="1"/>
-    <parkingArea id="pa_6" lane="-E6_0" startPos="24.69" endPos="34.69" roadsideCapacity="1"/>
-    <parkingArea id="pa_7" lane="E6_0" startPos="25.76" endPos="35.76" roadsideCapacity="1"/>
-    <parkingArea id="pa_8" lane="E8_0" startPos="32.49" endPos="42.49" roadsideCapacity="1"/>
-    <parkingArea id="pa_9" lane="-E8_0" startPos="30.52" endPos="40.52" roadsideCapacity="1"/>
-    <parkingArea id="pa_14" lane="E15_0" startPos="13.72" endPos="23.72" roadsideCapacity="1"/>
-    <!-- Other additionals -->
-
-    <!--<rerouter id="rerouter_0" edges="E12" probability="1">
-        <interval begin="0" end="10000">
-            <destProbReroute id="E0"/>
-        </interval>
-    </rerouter>
-
-    <rerouter id="rerouter_1" edges="E0" probability="1">
-        <interval begin="0" end="10000">
-            <destProbReroute id="E12"/>
-        </interval>
-    </rerouter>-->
-
+    <parkingArea id="pa_0" lane="E76_0" startPos="28.66" endPos="38.66" roadsideCapacity="2"/>
+    <parkingArea id="pa_1" lane="-E76_0" startPos="29.65" endPos="39.65" roadsideCapacity="2"/>
+    <parkingArea id="pa_10" lane="-E12_0" startPos="70.19" endPos="80.19" roadsideCapacity="2"/>
+    <parkingArea id="pa_13" lane="E6_0" startPos="34.92" endPos="44.92" roadsideCapacity="2"/>
+    <parkingArea id="pa_14" lane="E9_0" startPos="28.47" endPos="38.47" roadsideCapacity="2"/>
+    <parkingArea id="pa_15" lane="-E8_0" startPos="37.17" endPos="47.17" roadsideCapacity="2"/>
+    <parkingArea id="pa_16" lane="-E64_0" startPos="54.62" endPos="64.62" roadsideCapacity="2"/>
+    <parkingArea id="pa_17" lane="-E58_0" startPos="60.98" endPos="70.98" roadsideCapacity="2"/>
+    <parkingArea id="pa_18" lane="-E60_0" startPos="101.79" endPos="111.79" roadsideCapacity="2"/>
+    <parkingArea id="pa_19" lane="E66_0" startPos="42.19" endPos="52.19" roadsideCapacity="2"/>
+    <parkingArea id="pa_2" lane="-E73_0" startPos="33.15" endPos="43.15" roadsideCapacity="2"/>
+    <parkingArea id="pa_20" lane="E53_0" startPos="62.05" endPos="72.05" roadsideCapacity="2"/>
+    <parkingArea id="pa_21" lane="E50_0" startPos="73.49" endPos="83.49" roadsideCapacity="1"/>
+    <parkingArea id="pa_22" lane="-E50_0" startPos="69.94" endPos="79.94" roadsideCapacity="1"/>
+    <parkingArea id="pa_23" lane="-E29_0" startPos="70.00" endPos="80.00" roadsideCapacity="1"/>
+    <parkingArea id="pa_24" lane="-E30_0" startPos="51.30" endPos="61.30" roadsideCapacity="1"/>
+    <parkingArea id="pa_25" lane="E21_0" startPos="55.95" endPos="65.95" roadsideCapacity="1"/>
+    <parkingArea id="pa_26" lane="-E41_0" startPos="73.71" endPos="83.71" roadsideCapacity="1"/>
+    <parkingArea id="pa_27" lane="E72_0" startPos="77.10" endPos="87.10" roadsideCapacity="1"/>
+    <parkingArea id="pa_28" lane="-E72_0" startPos="89.87" endPos="99.87" roadsideCapacity="1"/>
+    <parkingArea id="pa_29" lane="-E16_0" startPos="42.87" endPos="52.87" roadsideCapacity="1"/>
+    <parkingArea id="pa_3" lane="E81_0" startPos="29.90" endPos="39.90" roadsideCapacity="2"/>
+    <parkingArea id="pa_30" lane="E3_0" startPos="29.35" endPos="39.35" roadsideCapacity="1"/>
+    <parkingArea id="pa_31" lane="-E67_0" startPos="61.81" endPos="71.81" roadsideCapacity="1"/>
+    <parkingArea id="pa_32" lane="E65_0" startPos="71.14" endPos="81.14" roadsideCapacity="1"/>
+    <parkingArea id="pa_33" lane="-E63_0" startPos="63.70" endPos="73.70" roadsideCapacity="1"/>
+    <parkingArea id="pa_34" lane="E68_0" startPos="90.78" endPos="100.78" roadsideCapacity="1"/>
+    <parkingArea id="pa_35" lane="-E68_0" startPos="111.86" endPos="121.86" roadsideCapacity="1"/>
+    <parkingArea id="pa_36" lane="E59_0" startPos="64.88" endPos="74.88" roadsideCapacity="1"/>
+    <parkingArea id="pa_37" lane="E40_0" startPos="62.59" endPos="72.59" roadsideCapacity="1"/>
+    <parkingArea id="pa_5" lane="-E83_0" startPos="25.41" endPos="35.41" roadsideCapacity="2"/>
+    <parkingArea id="pa_6" lane="E44_0" startPos="26.27" endPos="36.27" roadsideCapacity="2"/>
+    <parkingArea id="pa_7" lane="E36_0" startPos="25.42" endPos="35.42" roadsideCapacity="2"/>
+    <parkingArea id="pa_8" lane="-E37_0" startPos="45.36" endPos="55.36" roadsideCapacity="2"/>
 </additional>
