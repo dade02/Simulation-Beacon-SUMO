@@ -24,6 +24,9 @@ import random
 import csv
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+import copy
+import imageio.v2 as imageio
+import shutil
 
 def get_options():
     opt_parser = optparse.OptionParser()
@@ -397,74 +400,19 @@ class HeatMap:
         proj_y = y1 + t * (y2 - y1)
 
         return math.sqrt((px - proj_x) ** 2 + (py - proj_y) ** 2)
-
-    def find_best_parking_zones(self,preference,vehicle_id):
-        #filtro in base alle preferenze dei vari veicoli
-
-
-        # Inizializza tutte le celle a 1
-        cell_states = np.ones((self.rows, self.cols))
-
-        # Calcola i valori delle celle in base alla heatmap
-        for i in range(self.rows):
-            for j in range(self.cols):
-                if self.heat_map[i][j]:
-                    cell_states[i][j] = sum(self.heat_map[i][j])
-                else:
-                    cell_states[i][j] = 1 #fuori considerazione
-
-
-        #print("heatmap intermedia")
-        #self.print_heatmap_values()
+    """,preference"""
 
 
 
-        best_zones = [] #tutte le possibili aree di parcheggio filtrate
 
 
-        if preference[vehicle_id] == 'find-possibility':
-            """
-            Trova le zone della mappa con la maggiore probabilità di parcheggio libero,
-            cercando la cella con la somma maggiore ma <= 0.
-            """
-            max_value = -1e10
-            for i in range(self.rows):
-                for j in range(self.cols):
-                    if cell_states[i][j] > max_value and cell_states[i][j] <= 0:
-                        max_value = cell_states[i][j]
 
 
-            # Cerca le celle con il valore massimo trovato
-            for i in range(self.rows):
-                for j in range(self.cols):
-                    if cell_states[i][j] == max_value:
-                        best_zones.append((i, j))
-
-            #print(f"Veicolo {vehicle_id} settaggio destinazione con preferenza find-possibility" )
 
 
-        elif preference[vehicle_id] == 'distance':
-            #inserisce tutti i parcheggi segnati
-
-            for i in range(self.rows):
-                for j in range(self.cols):
-                    #inserisco tutti i parcheggi segnati sulla heatmap fino ad ora
-                    if cell_states[i][j] != 1:
-                        best_zones.append((i, j))
-
-            #print(f"Veicolo {vehicle_id} settaggio destinazione con preferenza distance" )
-        else:
-            #print("Errore settaggio file")
-            return None
-
-        #print(f"possibili destinazioni: {best_zones}")
-        return best_zones
-
-    def direct_vehicle_to_best_parking(self, vehicle_id, destinations,preference):
+    """,preference"""
+    def direct_vehicle_to_best_parking(self, vehicle_id, destinations,parkage_map,net):
         """
-        Dirige il veicolo verso la corsia (lane) con la maggiore probabilità di trovare un parcheggio libero,
-        prendendo in considerazione la destinazione attuale (edge_id) del veicolo.
-
         Parametri:
         - vehicle_id: L'ID del veicolo che deve essere indirizzato verso una zona di parcheggio.
         - destinations: Dizionario che associa vehicle_id a edge_id, che rappresenta la destinazione attuale del veicolo.
@@ -475,48 +423,50 @@ class HeatMap:
             #print(f"Nessuna destinazione trovata per il veicolo con ID {vehicle_id}.")
             return
 
-        best_zones = self.find_best_parking_zones(preference,vehicle_id)
+        """
+        bisogna trovare un tradeoff tra distanza di un parcheggio e possibilità che sia effettivamente libero
+        Per implementare ciò consideriamo la formula score = alfa * H(i) + (1-alfa) * D(i,d).
+        alfa è il coefficiente moltiplicativo (0.5 per dare peso uguale),i è la cella i-esima nella raprresentazione
+        della heatmap, H è la norma della possibilità di un parcheggio di essere libero mentre D è la norma della 
+        distanza del parcheggio dal punto B, rappresentata da d
+        """
 
-        if not best_zones:
-            #print("Nessuna area libera identificata. Non è possibile indirizzare il veicolo.")
-            return
+        ALFA = 0.5
+        DIS_SUBMAP = 5000  # per la norma D consideriamo una sottomappa di raggio 5 km
 
+        max_score = 0
         best_lane = None
-        min_cost = float('inf')
 
-        # Carica la rete stradale utilizzando sumolib
-        net = sumolib.net.readNet("parking_on_off_road.net.xml")
+        print(f'Possibili nuove destinazioni per {vehicle_id}')
 
-        for best_row, best_col in best_zones:
-            posX, posY = self.get_coordinates_from_cell(best_row, best_col) #coordinate centrali cella
-            nearest_lane = self.find_closest_lane(posX, posY) #lane più vicina alle coordinate
+        for i in range(self.rows):
+            for j in range(self.cols):
+                if self.heat_map[i][j]: # se segnata sulla heatmap
+                    num_true_parkage = sum(parkage_map.heat_map[i][j])        #N° parcheggi totali
+                    occupied_parkage = sum(self.heat_map[i][j]) * (-1)           #N° parcheggi occupati
+                    norm_parkage = 1.00 - ( float(occupied_parkage) / num_true_parkage ) #norma H
 
-            #distanza aerea
-            if nearest_lane:
-                lane_edge_id = traci.lane.getEdgeID(nearest_lane)
+                    posX, posY = self.get_coordinates_from_cell(i, j)  # coordinate centrali cella
+                    nearest_lane = self.find_closest_lane(posX, posY)  # lane più vicina alle coordinate
+                    distance_to_B,_ = get_route_distance(net,edge_id, nearest_lane)
 
-                try:
-                    # Calcola la distanza aerea tra i due edge
-                    x1, y1 = net.getEdge(edge_id).getFromNode().getCoord()
-                    x2, y2 = net.getEdge(lane_edge_id).getFromNode().getCoord()
-                    air_distance = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+                    norm_distance = 1.00 - ( float(distance_to_B) / DIS_SUBMAP ) #norma D
 
-                    #print(f"air distance: {air_distance} to {nearest_lane} da {edge_id}")
+                    score = ALFA * norm_parkage + ( 1 - ALFA ) * norm_distance
 
-                    if air_distance < min_cost:
-                        min_cost = air_distance
+                    if score > max_score:
+                        max_score = score
                         best_lane = nearest_lane
 
-                except Exception as e:
-                    #print(f"Errore nel calcolo della distanza aerea: {e}")
-                    continue
-
-                #print(f"best_lane: {best_lane}")
+                    print(f"Lane {nearest_lane.split('_')[0]} score : {score}")
+                    print(f"dettagli - norma H : {norm_parkage} norma D : {norm_distance}")
+                    print(f"parcheggi totali: {num_true_parkage} parcheggi occupati: {occupied_parkage} ")
+                    print(f"distanza da B: {distance_to_B} ")
 
         if best_lane:
             traci.vehicle.changeTarget(vehicle_id, best_lane.split('_')[0])
             destinations[vehicle_id] = best_lane.split('_')[0]
-            print(f"Il veicolo {vehicle_id} è stato indirizzato verso la corsia più vicina: {best_lane}")
+            print(f"Il veicolo {vehicle_id} è stato indirizzato verso la corsia : {best_lane.split('_')[0]} con lo score {max_score}")
         else:
             print(f"Nessuna corsia valida trovata per il veicolo {vehicle_id}.")
 
@@ -564,8 +514,8 @@ def is_exit_Parkage(vehicle_id,parking_id,parking_to_edge):
 
 
 def get_route_distance(net, from_edge, to_edge):
-    from_edge_obj = net.getEdge(from_edge)
-    to_edge_obj = net.getEdge(to_edge)
+    from_edge_obj = net.getEdge(from_edge.split('_')[0])
+    to_edge_obj = net.getEdge(to_edge.split('_')[0])
     route = net.getShortestPath(from_edge_obj, to_edge_obj)
     if route:
         distance = sum(edge.getLength() for edge in route[0])
@@ -766,16 +716,17 @@ def random_point_on_map():
                 break
 
 
-    if heatmap == True:
+    """if heatmap == True:
         if random.random() < 0.5:
             preference = "distance"
         else:
             preference = "find-possibility"
     else:
         preference = None
+    """
 
-
-    return (random_x, random_y), edge_id,heatmap,preference
+    """,preference"""
+    return (random_x, random_y), edge_id,heatmap
 
 
 def get_vehicle_ids_from_xml(xml_file):
@@ -815,9 +766,11 @@ def set_vehicle_destinations():
 
     for vehicle_id in vehicle_ids:
         # Ottenere un punto casuale sulla mappa
-        (x, y), edge_id, heat_map, preference = random_point_on_map()
+        """, preference"""
+        (x, y), edge_id, heat_map = random_point_on_map()
         if edge_id:
-            destinations.append([vehicle_id, edge_id, x, y,heat_map,preference])
+            """,preference"""
+            destinations.append([vehicle_id, edge_id, x, y,heat_map])
         else:
             print(f"Errore creazione destinazione veicolo {vehicle_id}")
             destinations.append([vehicle_id,"None"])
@@ -825,7 +778,8 @@ def set_vehicle_destinations():
     # Scrivere le destinazioni nel file CSV
     with open(file_name, mode='w', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(['VehicleID', 'EdgeID', 'X', 'Y','heatmap','preference'])
+        """,'preference'"""
+        writer.writerow(['VehicleID', 'EdgeID', 'X', 'Y','heatmap'])
         for destination in destinations:
             writer.writerow(destination)
 
@@ -845,7 +799,7 @@ def get_vehicle_destinations():
     # Legge le destinazioni dal file CSV
     destinations = {}
     use_heatmap = {}
-    preference = {}
+    #preference = {}
     with open(file_name, mode='r') as file:
         reader = csv.DictReader(file)
         for row in reader:
@@ -854,9 +808,9 @@ def get_vehicle_destinations():
             heat_map = row['heatmap']
             destinations[vehicle_id] = edge_id
             use_heatmap[vehicle_id] = heat_map
-            preference[vehicle_id] = row['preference']
+            #preference[vehicle_id] = row['preference']
 
-    return destinations,use_heatmap,preference
+    return destinations,use_heatmap #,preference
 
 
 
@@ -868,7 +822,8 @@ def run():
     # salva mappa parcheggi reali
     parkage_map.save_heatmap_to_image('real_parkages.jpg', 'parcheggi reali', True)
 
-
+    #lista formata da tutte le transizioni intermedie della heatmap ( posso creare una GIF )
+    storic_heatmap = []
 
     set_vehicle_destinations()
     parking_list = traci.parkingarea.getIDList()  #lista parcheggi
@@ -920,7 +875,9 @@ def run():
     #exit_lane_list = []
     car_arrived_in_b = [] #lista di veicoli arrivati al loro punto B
 
-    destinations,use_heatmap,preference = get_vehicle_destinations() # punti B per ciascun veicolo
+    """,preference """
+    destinations,use_heatmap  = get_vehicle_destinations() # punti B per ciascun veicolo
+
     #print(destinations)
     net = sumolib.net.readNet("parking_on_off_road.net.xml")
 
@@ -943,7 +900,8 @@ def run():
         for vehicle_id in traci.vehicle.getIDList():
             if use_heatmap[vehicle_id] == 'True':
                 print(f"veicolo {vehicle_id} usa la heatmap")
-                heatmap.direct_vehicle_to_best_parking(vehicle_id,destinations,preference)
+                """,preference"""
+                heatmap.direct_vehicle_to_best_parking(vehicle_id,destinations,parkage_map,net)
                 use_heatmap[vehicle_id] = None
 
             if vehicle_id not in car_arrived_in_b:
@@ -1081,13 +1039,52 @@ def run():
                         if current_time - recent_parking_vehicles[vehicle_id] > COOLDOWN_PERIOD:
                             del recent_parking_vehicles[vehicle_id]
 
+        deep_copy_heatmap = copy.deepcopy(heatmap)
+        storic_heatmap.append(deep_copy_heatmap)
+
+    #Creo GIF della heatmap-----------------
+
+    # Cartella temporanea per le immagini
+    temp_dir = "images_GIF"
+    os.makedirs(temp_dir, exist_ok=True)
+    image_filenames = []
+    N = 10  # Salva un'immagine ogni 10 step
 
 
+    print(f"Numero frame heatmap {len(storic_heatmap)}")
+
+    # Salva ogni heatmap come immagine
+    for i, heatmap in enumerate(storic_heatmap):
+        if i % N == 0:  # Solo ogni N step
+            filename = f"{temp_dir}/heatmap_{i}.png"
+            storic_heatmap[i].save_heatmap_to_image(filename)
+            image_filenames.append(filename)
+            print(f"salvata immagine {i}")
+
+    print("fine salva immagini GIF")
+    # Crea una GIF a partire dalle immagini
+    with imageio.get_writer('heatmap_animation.gif', mode='I', duration=0.5) as writer:
+        for filename in image_filenames:
+            image = imageio.imread(filename)
+            writer.append_data(image)
+
+    # Rimuovi le immagini temporanee
+    for filename in image_filenames:
+        os.remove(filename)
+
+    # Elimina la cartella temporanea
+    shutil.rmtree(temp_dir)
+    print("GIF creata con successo!")
+
+    #fine creazione GIF heatmap-------------------------
 
     traci.close()
 
     #salva heatmap
     heatmap.save_heatmap_to_image('heatmap.jpg')
+
+
+
 
 
 
