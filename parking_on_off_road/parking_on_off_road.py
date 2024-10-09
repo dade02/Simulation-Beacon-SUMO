@@ -643,12 +643,14 @@ def estrai_numero(veicolo):
 
 def random_point_on_map():
     # Ottenere i limiti della mappa
-    edges = traci.edge.getIDList()
+
     min_x, min_y, max_x, max_y = float('inf'), float('inf'), float('-inf'), float('-inf')
     NET_FILE = "parking_on_off_road.net.xml"
     tree = ET.parse(NET_FILE)
     root = tree.getroot()
     ENTRY_EXIT_LIST = ["E85","-E85","E86","-E86"]
+
+    #calcolo lane arrivo
     try:
         # Iterare su tutti gli edge
         for edge in root.findall('edge'):
@@ -715,35 +717,83 @@ def random_point_on_map():
                 edge_id = e
                 break
 
+    # calcolo lane partenza
+    try:
+        # Iterare su tutti gli edge
+        for edge in root.findall('edge'):
+            # Iterare su tutte le lane all'interno dell'edge
+            if edge.get("id") not in ENTRY_EXIT_LIST:
+                for lane in edge.findall('lane'):
+                    # Ottenere il valore dell'attributo shape
+                    shape = lane.get('shape')
+                    if shape:
+                        # Analizzare i punti dell'attributo shape
+                        points = shape.split()
+                        for point in points:
+                            x, y = map(float, point.split(','))
+                            # Aggiornare i limiti
+                            min_x = min(min_x, x)
+                            min_y = min(min_y, y)
+                            max_x = max(max_x, x)
+                            max_y = max(max_y, y)
 
-    """if heatmap == True:
-        if random.random() < 0.5:
-            preference = "distance"
-        else:
-            preference = "find-possibility"
+
+
+    except Exception as e:
+        print(f"Errore durante l'ottenimento dei limiti della mappa dal file di rete: {e}")
+        return None, None, None, None
+
+        # Generare un punto casuale all'interno dei limiti della mappa
+    random_x = random.uniform(min_x, max_x)
+    random_y = random.uniform(min_y, max_y)
+
+    # Generare randomicamente edge_id = None con una probabilità del 10%
+    # if random.random() < 0.1:  # Probabilità del 10%
+    #   return (random_x, random_y), None
+
+    # Generare randomicamente uso heatmap 40%
+    if random.random() < 0.7:  # Probabilità del 40%
+        heatmap = True
     else:
-        preference = None
-    """
+        heatmap = False
+
+    # Ottenere l'edge più vicino al punto casuale
+    edge_id_p = None
+    while edge_id_p == None or edge_id_p in ENTRY_EXIT_LIST:
+        # print(f"edge id: {edge_id}")
+        try:
+            random_x = random.uniform(min_x, max_x)
+            random_y = random.uniform(min_y, max_y)
+            edge_id_p, _, _ = traci.simulation.convertRoad(random_x, random_y, isGeo=False)
+        except traci.TraCIException:
+            edge_id_p = None
+
+    connected_edges = []
+    # Verificare se l'edge_id è quello di una junction e trovare un edge connesso
+    if edge_id_p and edge_id_p.startswith(':'):
+        for edge in root.findall('edge'):
+            # print(f"to: {edge.get('to')}, current {(edge_id.split('_')[0])[1:]}")
+            if edge.get("to") == (edge_id_p.split('_')[0])[1:]:
+                connected_edges.append(edge.get("id"))
+
+        for e in connected_edges:
+            if not e.startswith(':') and e not in ENTRY_EXIT_LIST:
+                edge_id_p = e
+                break
 
     """,preference"""
-    return (random_x, random_y), edge_id,heatmap
+    return (random_x, random_y), edge_id_p,edge_id,heatmap
 
 
-def get_vehicle_ids_from_xml(xml_file):
+def get_vehicle_number_from_xml(xml_file):
     tree = ET.parse(xml_file)
     root = tree.getroot()
 
-    vehicle_ids = []
-    for flow in root.findall('.//flow'):
-        flow_id = flow.get('id')
-        number = int(flow.get('number', 0))
-        for i in range(number):
-            vehicle_ids.append(f"{flow_id}.{i}")
-
-    return vehicle_ids
+    dimensione_area = int(root.find('vehicles_number').text)
+    return dimensione_area
 
 
-def set_vehicle_destinations():
+def set_vehicle_point_A_B():
     # Nome del file CSV
     file_name = 'setDestination.csv'
 
@@ -753,13 +803,12 @@ def set_vehicle_destinations():
         return
 
     # Ottenere la lista dei veicoli dal file XML
-    vehicle_ids = get_vehicle_ids_from_xml('parking_on_off_road.rou.xml')
+    vehicle_number = get_vehicle_number_from_xml('heat_map.xml') #da modificare
 
-    if not vehicle_ids:
-        print("Nessun veicolo presente nel file XML.")
-        return
+    vehicle_ids = []
 
-
+    for i in range(vehicle_number):
+        vehicle_ids.append(f"vehicle_{i}")
 
     # Lista per salvare le destinazioni dei veicoli
     destinations = []
@@ -767,10 +816,10 @@ def set_vehicle_destinations():
     for vehicle_id in vehicle_ids:
         # Ottenere un punto casuale sulla mappa
         """, preference"""
-        (x, y), edge_id, heat_map = random_point_on_map()
+        (x, y),edge_id_p, edge_id, heat_map = random_point_on_map()
         if edge_id:
             """,preference"""
-            destinations.append([vehicle_id, edge_id, x, y,heat_map])
+            destinations.append([vehicle_id,edge_id_p,edge_id, x, y,heat_map])
         else:
             print(f"Errore creazione destinazione veicolo {vehicle_id}")
             destinations.append([vehicle_id,"None"])
@@ -779,7 +828,7 @@ def set_vehicle_destinations():
     with open(file_name, mode='w', newline='') as file:
         writer = csv.writer(file)
         """,'preference'"""
-        writer.writerow(['VehicleID', 'EdgeID', 'X', 'Y','heatmap'])
+        writer.writerow(['VehicleID','EdgeIDp','EdgeID', 'X', 'Y','heatmap'])
         for destination in destinations:
             writer.writerow(destination)
 
@@ -787,7 +836,7 @@ def set_vehicle_destinations():
     print(f"{file_name} è stato creato con le destinazioni dei veicoli.")
 
 
-def get_vehicle_destinations():
+def get_vehicle_point_A_B():
     # Nome del file CSV
     file_name = 'setDestination.csv'
 
@@ -797,6 +846,7 @@ def get_vehicle_destinations():
         return
 
     # Legge le destinazioni dal file CSV
+    starting_lanes = {}
     destinations = {}
     use_heatmap = {}
     #preference = {}
@@ -804,13 +854,15 @@ def get_vehicle_destinations():
         reader = csv.DictReader(file)
         for row in reader:
             vehicle_id = row['VehicleID']
+            edge_id_p = row['EdgeIDp']
             edge_id = row['EdgeID']
             heat_map = row['heatmap']
+            starting_lanes[vehicle_id] = edge_id_p
             destinations[vehicle_id] = edge_id
             use_heatmap[vehicle_id] = heat_map
             #preference[vehicle_id] = row['preference']
 
-    return destinations,use_heatmap #,preference
+    return starting_lanes, destinations,use_heatmap #,preference
 
 
 
@@ -825,7 +877,7 @@ def run():
     #lista formata da tutte le transizioni intermedie della heatmap ( posso creare una GIF )
     storic_heatmap = []
 
-    set_vehicle_destinations()
+    set_vehicle_point_A_B()
     parking_list = traci.parkingarea.getIDList()  #lista parcheggi
 
     parked_vehicles = {}                          # veicoli parcheggiati co relativi parcheggi
@@ -876,7 +928,11 @@ def run():
     car_arrived_in_b = [] #lista di veicoli arrivati al loro punto B
 
     """,preference """
-    destinations,use_heatmap  = get_vehicle_destinations() # punti B per ciascun veicolo
+    starting_lanes,destinations,use_heatmap = get_vehicle_point_A_B() # punti B per ciascun veicolo
+
+
+
+
 
     #print(destinations)
     net = sumolib.net.readNet("parking_on_off_road.net.xml")
@@ -887,14 +943,65 @@ def run():
     print("FINE HEATMAP")
 
 
-    print('Mappa parcheggi')
+    delay_start = 10 # delay di partenza di un veicolo dall' altro
+    current_delay_time = 0 # delay attuale
 
-    print('Fine Mappa parcheggi')
+    vehicle_index = 0 # indice del veicolo che sta per partire
 
+    vehicle = list(starting_lanes.keys())[vehicle_index]
+    st_lane = starting_lanes[vehicle]  # Ottieni la lane di partenza
+
+    print(f"Faccio partire il veicolo: {vehicle}")
+
+    # Crea una route per il veicolo basata sull'edge (st_lane)
+    traci.route.add(routeID=f"route_{vehicle}", edges=[st_lane])
+    traci.vehicle.add(
+        vehID=vehicle,
+        routeID=f"route_{vehicle}",  # Route creata dinamicamente per ogni veicolo
+        departPos="0",  # Posizione iniziale sulla corsia
+        departSpeed="max"  # Velocità massima alla partenza
+    )
+    vehicle_index += 1
 
     while traci.simulation.getMinExpectedNumber() > 0:
+        print(f"numero veicoli attuale: {traci.vehicle.getIDList()}")
+        #if len(traci.vehicle.getIDList()) == 0:
+            #break
+
+        print(f"veicoli aspettati:{ traci.simulation.getMinExpectedNumber()}")
+
+        if current_delay_time < delay_start and vehicle_index < len(starting_lanes):
+            vehicle = list(starting_lanes.keys())[vehicle_index]  # Prendi il veicolo successivo
+            st_lane = starting_lanes[vehicle]  # Ottieni la lane di partenza
+
+            print(f"Faccio partire il veicolo: {vehicle}")
+
+            # Crea una route per il veicolo basata sull'edge (st_lane)
+            traci.route.add(routeID=f"route_{vehicle}", edges=[st_lane])
+
+            # Aggiungi il veicolo usando la route appena creata
+            traci.vehicle.add(
+                vehID=vehicle,
+                routeID=f"route_{vehicle}",  # Route creata dinamicamente per ogni veicolo
+                departPos="0",  # Posizione iniziale sulla corsia
+                departSpeed="0.1"  # Velocità massima alla partenza
+            )
+
+            traci.vehicle.setMaxSpeed(vehicle, 10.0)
+
+            vehicle_index += 1  # Incrementa solo dopo aver aggiunto il veicolo
+
+        current_delay_time = current_delay_time % delay_start
+
         traci.simulationStep()
         current_time = traci.simulation.getTime()
+
+        if len(traci.vehicle.getIDList() ) == 0:
+            print("Tutti i veicoli sono usciti: fine simulazione!")
+            break
+
+
+
 
 
         for vehicle_id in traci.vehicle.getIDList():

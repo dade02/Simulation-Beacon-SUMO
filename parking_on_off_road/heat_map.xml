@@ -1,3 +1,4 @@
 <config>
-    <dimensione_area>100</dimensione_area>
+    <dimensione_area>10</dimensione_area>
+    <vehicles_number>50</vehicles_number>
 </config>
