@@ -172,7 +172,7 @@ def crea_bar_plot(file_csv):
                 plt.legend(title='Tipo di metrica')
 
                 # Salva il grafico in un file (opzionale)
-                plt.savefig(f"barplot_percentuale_{percentuale}_veicoli_{veicoli}_{metrica_heatmap.split('_heatmap')[0]}.png")
+                plt.savefig(f"barplot_percentuale_{percentuale}_veicoli_{veicoli}_{metrica_heatmap.split('_heatmap'bar)[0]}.png")
 
                 # Mostra il grafico
                 plt.show()
