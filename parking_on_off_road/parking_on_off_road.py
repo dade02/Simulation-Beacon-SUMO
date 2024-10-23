@@ -413,7 +413,7 @@ class HeatMap:
 
 
     """,preference"""
-    def direct_vehicle_to_best_parking(self, vehicle_id, destinations,parkage_map,net):
+    def direct_vehicle_to_best_parking(self, vehicle_id, destinations,parkage_map,net,alfa):
         """
         Parametri:
         - vehicle_id: L'ID del veicolo che deve essere indirizzato verso una zona di parcheggio.
@@ -433,7 +433,7 @@ class HeatMap:
         distanza del parcheggio dal punto B, rappresentata da d
         """
 
-        ALFA = 0.5
+
         DIS_SUBMAP = 5000  # per la norma D consideriamo una sottomappa di raggio 5 km
 
         max_score = 0
@@ -454,7 +454,7 @@ class HeatMap:
 
                     norm_distance = 1.00 - ( float(distance_to_B) / DIS_SUBMAP ) #norma D
 
-                    score = ALFA * norm_parkage + ( 1 - ALFA ) * norm_distance
+                    score = alfa * norm_parkage + ( 1 - alfa ) * norm_distance
 
                     if score > max_score:
                         max_score = score
@@ -785,17 +785,17 @@ def get_vehicle_number_from_xml(xml_file):
     return vehicles_number
 
 
-def set_vehicle_point_A_B():
+def set_vehicle_point_A_B(vehicle_number):
     # Nome del file CSV
     file_name = 'setDestination.csv'
 
     # Controlla se il file esiste già
-    if os.path.exists(file_name):
+    """if os.path.exists(file_name):
         print(f"{file_name} esiste già. Non verrà sovrascritto.")
-        return
+        return"""
 
     # Ottenere la lista dei veicoli dal file XML
-    vehicle_number = get_vehicle_number_from_xml('heat_map.xml') #da modificare
+    #vehicle_number = get_vehicle_number_from_xml('heat_map.xml') #da modificare
 
     vehicle_ids = []
 
@@ -976,12 +976,13 @@ def calcola_analisi_dati(time_A_start, time_B_arrive, parked_in_B, vehicle_use_h
 
     return t_a_to_b_pb_hm,t_b_to_p_hm,d_b_to_p_hm,t_a_to_b_pb,t_b_to_p,d_b_to_p
 
-def generate_results(perc_hm,numVeicoli,granularità,t_A_Bpb_hm,t_B_p_hm,d_B_p_hm,t_A_Bpb,t_B_p,d_B_p):
+def generate_results(perc_hm,numVeicoli,granularità,alfa,t_A_Bpb_hm,t_B_p_hm,d_B_p_hm,t_A_Bpb,t_B_p,d_B_p):
     # Definizione delle intestazioni delle colonne
     headers = [
         'percentuale_uso_heatmap',
         'veicoli',
         'granularità',
+        'alfa',
         'tempo_medio_parcheggio_B_heatmap',
         'tempo_medio_ricerca_posteggio_heatmap',
         'distanza_parcheggio_punto_B_heatmap',
@@ -1003,22 +1004,22 @@ def generate_results(perc_hm,numVeicoli,granularità,t_A_Bpb_hm,t_B_p_hm,d_B_p_h
             writer.writerow(headers)
 
         # Genera e scrivi la righe di dati
-        writer.writerow([perc_hm, numVeicoli, granularità,t_A_Bpb_hm,t_B_p_hm, d_B_p_hm, t_A_Bpb, t_B_p,d_B_p])
+        writer.writerow([perc_hm, numVeicoli, granularità,alfa,t_A_Bpb_hm,t_B_p_hm, d_B_p_hm, t_A_Bpb, t_B_p,d_B_p])
 
     print(f"File '{filename}' creato con successo!")
 
 def save_agent_csv(perc_use_heatmap,numero_test_percentuale,vehicle_id, A,B,p,heatmap,tempo_percorso,
-                   tempo_ricerca_parcheggio,pedon_distance):
+                   tempo_ricerca_parcheggio,pedon_distance,alfa,vehicle_number):
     # Nome del file CSV
     file_name = 'data_agent.csv'
 
     # Intestazioni del CSV (puoi cambiare questi nomi secondo necessità)
     header = ['perc_use_heatmap', 'numero_test_percentuale', 'vehicle_id', 'A', 'B', 'p', 'heatmap',
-              'tempo_percorso', 'tempo_ricerca_parcheggio', 'pedon_distance']
+              'tempo_percorso', 'tempo_ricerca_parcheggio', 'pedon_distance','alfa','vehicle_number']
 
     # Dati da salvare
     data = [perc_use_heatmap, numero_test_percentuale, vehicle_id, A, B, p, heatmap,
-            tempo_percorso, tempo_ricerca_parcheggio, pedon_distance]
+            tempo_percorso, tempo_ricerca_parcheggio, pedon_distance,alfa,vehicle_number]
 
     # Verifica se il file esiste già o meno
     try:
@@ -1068,7 +1069,7 @@ def start_simulations_in_parallel(percentuali_heatmap, numero_test_percentuale):
             future.result()  # Questo metodo blocca l'esecuzione finché il processo non è terminato
 
 """
-def run(percentuali_heatmap,numero_test_percentuale):
+def run(percentuali_heatmap,numero_test_percentuale,alfa,vehicle_number):
     parkage_map = HeatMap(xml_file='heat_map.xml', additional_file='parking_on_off_road.add.xml')
     parkage_map.update(True, real_parkages=True)
     #parkage_map.print_heatmap_values()
@@ -1078,7 +1079,7 @@ def run(percentuali_heatmap,numero_test_percentuale):
     #lista formata da tutte le transizioni intermedie della heatmap ( posso creare una GIF )
     storic_heatmap = []
 
-    set_vehicle_point_A_B()
+    set_vehicle_point_A_B(vehicle_number)
     parking_list = traci.parkingarea.getIDList()  #lista parcheggi
 
     parked_vehicles = {}                          # veicoli parcheggiati co relativi parcheggi
@@ -1235,7 +1236,7 @@ def run(percentuali_heatmap,numero_test_percentuale):
             if use_heatmap[vehicle_id] == 'True':
                 print(f"veicolo {vehicle_id} usa la heatmap")
                 """,preference"""
-                heatmap.direct_vehicle_to_best_parking(vehicle_id,destinations,parkage_map,net)
+                heatmap.direct_vehicle_to_best_parking(vehicle_id,destinations,parkage_map,net,alfa)
                 use_heatmap[vehicle_id] = None
 
             if vehicle_id not in car_arrived_in_b:
@@ -1297,7 +1298,7 @@ def run(percentuali_heatmap,numero_test_percentuale):
                             save_agent_csv(perc_use_heatmap,numero_test_percentuale,vehicle_id, starting_lanes[vehicle_id]
                                            ,destinations[vehicle_id],edge_parked[vehicle_id],vehicle_use_heatmap[vehicle_id],
                                            time_B_arrive[vehicle_id]-time_A_start[vehicle_id],time_parked[vehicle_id]-
-                                           time_B_arrive[vehicle_id],round(pedon_distance,2))
+                                           time_B_arrive[vehicle_id],round(pedon_distance,2),alfa,vehicle_number)
 
                             # cancello ultimo reroute se esiste
                             # se la destinazione non è la lane dove vi è adesso il veicolo
@@ -1410,7 +1411,7 @@ def run(percentuali_heatmap,numero_test_percentuale):
 
 
     generate_results(f"{float(cont_use_heatmap) / float(len(use_heatmap)) * 100:.2f}%",len(use_heatmap),
-                     heatmap._read_dimensione_area_from_xml(xml_file='heat_map.xml'),tempo_A_B_pB_hm,
+                     heatmap._read_dimensione_area_from_xml(xml_file='heat_map.xml'),alfa,vehicle_number,tempo_A_B_pB_hm,
                     tempo_B_p_hm,distanza_B_p_hm, tempo_A_B_pB,tempo_B_p,distanza_B_p)
 
     print("Fine raccolta analisi dati")
@@ -1501,19 +1502,25 @@ if __name__ == '__main__':
         sumoBinary = checkBinary('sumo-gui')
 
 
-    #0,0.25,0.5,0.75
-    percentuali_heatmap = [0,0.25,0.5,0.75,1]
-    numero_test_percentuale = 10
-    #start_simulations_in_parallel(percentuali_heatmap, numero_test_percentuale)
-    for p in percentuali_heatmap:
-        for i in range(numero_test_percentuale):
-            # Avvia SUMO con l'opzione --start per iniziare subito la simulazione
-            traci.start(
-                [sumoBinary, "-c", "parking_on_off_road.sumocfg", "--tripinfo-output", f"tripinfo_{p}_{i}.xml",
-                 "--start","--quit-on-end"])
+    #0,0.25,0.5,0.75,1
+    percentuali_heatmap = [0.5]
+    numero_test_percentuale = 2 #10
 
-            # Chiama la funzione run che gestisce la logica della simulazione
-            run(p, i)
+    #,0.4,0.6,0.8
+    alfa = [0.2,0.4] # coefficiente dei pesi per calcolare lo score (più è piccola più do' peso alla distanza)
+    #start_simulations_in_parallel(percentuali_heatmap, numero_test_percentuale)
+    vehicle_number = [50,100] #,300,400,500
+    for p in percentuali_heatmap:
+        for a in alfa:
+            for v_num in vehicle_number:
+                for i in range(numero_test_percentuale):
+                    # Avvia SUMO con l'opzione --start per iniziare subito la simulazione
+                    traci.start(
+                        [sumoBinary, "-c", "parking_on_off_road.sumocfg", "--tripinfo-output", f"tripinfo_{p}_{i}.xml",
+                         "--start","--quit-on-end"])
+
+                    # Chiama la funzione run che gestisce la logica della simulazione
+                    run(p, i,a,v_num)
 
 
 

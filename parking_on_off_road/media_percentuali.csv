@@ -1,0 +1,5 @@
+percentuale_uso_rounded,alfa,veicoli,tempo_medio_parcheggio_B_heatmap,tempo_medio_ricerca_posteggio_heatmap,distanza_parcheggio_punto_B_heatmap,tempo_medio_parcheggio_B,tempo_medio_ricerca_posteggio,distanza_parcheggio_punto_B
+50,0.2,50,110.58500000000001,24.68,164.42000000000002,120.5,58.980000000000004,123.005
+50,0.2,100,127.64000000000001,7.890000000000001,186.11,149.225,58.925,114.275
+50,0.4,50,125.25,29.52,170.92000000000002,129.125,61.39,117.515
+50,0.4,100,129.465,19.725,231.79000000000002,134.745,61.370000000000005,117.84
