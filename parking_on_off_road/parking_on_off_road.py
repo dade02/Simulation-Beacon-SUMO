@@ -27,6 +27,7 @@ import matplotlib.colors as mcolors
 import copy
 import imageio.v2 as imageio
 import shutil
+import concurrent.futures
 
 def get_options():
     opt_parser = optparse.OptionParser()
@@ -214,6 +215,7 @@ class HeatMap:
             # Trova tutti gli elementi 'parkingArea'
             for parking_area in root_additional.findall(".//parkingArea"):
                 parking_id = parking_area.get("id")
+                roadside_capacity = int(parking_area.get("roadsideCapacity"))  # Ottieni la capacità del parcheggio
                 posX, posY = get_parking_coordinates(parking_id, 'parking_on_off_road.add.xml')
                 # Calcola gli indici della matrice per la posizione del veicolo
                 col_index = math.floor((posX - self.minX) / self.dimensione_area)
@@ -221,7 +223,7 @@ class HeatMap:
 
                 # Verifica che gli indici siano all'interno dei limiti della matrice
                 if 0 <= col_index < self.cols and 0 <= row_index < self.rows:
-                    self.heat_map[row_index][col_index].append(1)
+                    self.heat_map[row_index][col_index].append(roadside_capacity)
 
     def print_heatmap(self, title="Heatmap",real_parkage=False):
         """
@@ -496,7 +498,8 @@ def park_vehicle(vehicle_id, parkage_id, parking_car_parked, parking_capacity, p
 
     if occupied_count < capacity:
         print("C' è spazio")
-        traci.vehicle.setParkingAreaStop(vehicle_id, parkage_id, 40)  # 10 è la durata della sosta
+        time_stop = random.randint(20, 90)
+        traci.vehicle.setParkingAreaStop(vehicle_id, parkage_id, 70)  # time_stop è la durata della sosta #? (parametro)
         parking_car_parked[parkage_id] += 1
         parked_vehicles[vehicle_id] = parkage_id
         return True
@@ -685,11 +688,6 @@ def random_point_on_map():
     #if random.random() < 0.1:  # Probabilità del 10%
      #   return (random_x, random_y), None
 
-    # Generare randomicamente uso heatmap 40%
-    if random.random() < 0.7:  # Probabilità del 40%
-        heatmap = True
-    else:
-        heatmap = False
 
 
     # Ottenere l'edge più vicino al punto casuale
@@ -751,12 +749,6 @@ def random_point_on_map():
     # if random.random() < 0.1:  # Probabilità del 10%
     #   return (random_x, random_y), None
 
-    # Generare randomicamente uso heatmap 40%
-    if random.random() < 0.7:  # Probabilità del 40%
-        heatmap = True
-    else:
-        heatmap = False
-
     # Ottenere l'edge più vicino al punto casuale
     edge_id_p = None
     while edge_id_p == None or edge_id_p in ENTRY_EXIT_LIST:
@@ -782,15 +774,15 @@ def random_point_on_map():
                 break
 
     """,preference"""
-    return (random_x, random_y), edge_id_p,edge_id,heatmap
+    return (random_x, random_y), edge_id_p,edge_id
 
 
 def get_vehicle_number_from_xml(xml_file):
     tree = ET.parse(xml_file)
     root = tree.getroot()
 
-    dimensione_area = int(root.find('vehicles_number').text)
-    return dimensione_area
+    vehicles_number = int(root.find('vehicles_number').text)
+    return vehicles_number
 
 
 def set_vehicle_point_A_B():
@@ -816,10 +808,10 @@ def set_vehicle_point_A_B():
     for vehicle_id in vehicle_ids:
         # Ottenere un punto casuale sulla mappa
         """, preference"""
-        (x, y),edge_id_p, edge_id, heat_map = random_point_on_map()
+        (x, y),edge_id_p, edge_id = random_point_on_map()
         if edge_id:
             """,preference"""
-            destinations.append([vehicle_id,edge_id_p,edge_id, x, y,heat_map])
+            destinations.append([vehicle_id,edge_id_p,edge_id, x, y])
         else:
             print(f"Errore creazione destinazione veicolo {vehicle_id}")
             destinations.append([vehicle_id,"None"])
@@ -828,7 +820,7 @@ def set_vehicle_point_A_B():
     with open(file_name, mode='w', newline='') as file:
         writer = csv.writer(file)
         """,'preference'"""
-        writer.writerow(['VehicleID','EdgeIDp','EdgeID', 'X', 'Y','heatmap'])
+        writer.writerow(['VehicleID','EdgeIDp','EdgeID', 'X', 'Y'])
         for destination in destinations:
             writer.writerow(destination)
 
@@ -836,7 +828,7 @@ def set_vehicle_point_A_B():
     print(f"{file_name} è stato creato con le destinazioni dei veicoli.")
 
 
-def get_vehicle_point_A_B():
+def get_vehicle_point_A_B(probability_heatmap):
     # Nome del file CSV
     file_name = 'setDestination.csv'
 
@@ -856,21 +848,230 @@ def get_vehicle_point_A_B():
             vehicle_id = row['VehicleID']
             edge_id_p = row['EdgeIDp']
             edge_id = row['EdgeID']
-            heat_map = row['heatmap']
             starting_lanes[vehicle_id] = edge_id_p
             destinations[vehicle_id] = edge_id
-            use_heatmap[vehicle_id] = heat_map
+
+            random_float = random.uniform(0, 1)
+            if random_float < probability_heatmap:
+                use_heatmap[vehicle_id] = 'True'
+            else:
+                use_heatmap[vehicle_id] = 'False'
             #preference[vehicle_id] = row['preference']
 
     return starting_lanes, destinations,use_heatmap #,preference
 
 
+def calculate_distance(point1, point2):
+    """
+    Calcola la distanza euclidea tra due punti.
+
+    Args:
+        point1: Una tupla con le coordinate del primo punto (x1, y1).
+        point2: Una tupla con le coordinate del secondo punto (x2, y2).
+
+    Returns:
+        La distanza euclidea tra i due punti.
+    """
+    return math.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
 
 
-def run():
+def get_midpoint(edge):
+    """
+    Calcola il punto medio di un bordo (lane).
+
+    Args:
+        edge: Oggetto del bordo, che ha coordinate di inizio e fine.
+
+    Returns:
+        Una tupla contenente le coordinate (x, y) del punto medio.
+    """
+    start = edge.getFromNode().getCoord()  # Coordinate di inizio
+    end = edge.getToNode().getCoord()  # Coordinate di fine
+
+    midpoint_x = (start[0] + end[0]) / 2
+    midpoint_y = (start[1] + end[1]) / 2
+
+    return (midpoint_x, midpoint_y)
+
+
+
+
+
+
+def calcola_analisi_dati(time_A_start, time_B_arrive, parked_in_B, vehicle_use_heatmap,time_parked, edge_parked,origin_destinations,net):
+    tot_time_vehicle_heatmap = 0
+    tot_time_vehicle_not_heatmap = 0
+    num_parcheggio_b_heatmap = 0
+    num_parcheggio_b_not_heatmap = 0
+    num_use_heatmap = 0
+    num_not_use_heatmap = 0
+    tot_time_B_to_parkage_heatmap = 0
+    tot_time_B_to_parkage_not_heatmap = 0
+    tot_distance_B_to_parkage_not_heatmap = 0
+    tot_distance_B_to_parkage_heatmap = 0
+
+    #for edge in net.getEdges():
+     #   print(edge.getID())
+
+    for v, in_B in parked_in_B.items():
+        if vehicle_use_heatmap[v] == 'True':
+            num_use_heatmap += 1
+        else:
+            num_not_use_heatmap += 1
+
+        if in_B == True:
+            if vehicle_use_heatmap[v] == 'True':
+                tot_time_vehicle_heatmap += time_B_arrive[v] - time_A_start[v]
+                num_parcheggio_b_heatmap += 1
+            else:
+                tot_time_vehicle_not_heatmap += time_B_arrive[v] - time_A_start[v]
+                num_parcheggio_b_not_heatmap += 1
+
+        mid_point_B = get_midpoint(net.getEdge(origin_destinations[v]))
+        mid_point_parkage = get_midpoint(net.getEdge(edge_parked[v]))
+        pedon_distance = calculate_distance(mid_point_B, mid_point_parkage) # calcolo la distanza parcheggio - punto B come
+
+        #la distanza euclidea dei punti medi delle due lane
+
+        if vehicle_use_heatmap[v] == 'True':
+            tot_time_B_to_parkage_heatmap += time_parked[v] - time_B_arrive[v]
+            tot_distance_B_to_parkage_heatmap += pedon_distance
+
+        else:
+            tot_time_B_to_parkage_not_heatmap += time_parked[v] - time_B_arrive[v]
+            tot_distance_B_to_parkage_not_heatmap += pedon_distance
+
+        #print(f"veicolo {v}, distanza a piedi: {pedon_distance} heatmap?: {vehicle_use_heatmap[v]}, parkage in B?: {parked_in_B[v]}, time for parkage from B:{time_parked[v] - time_B_arrive[v]}")
+        #print(f"punto medio B:{mid_point_B}, punto medio parcheggio:{mid_point_parkage},parcheggio: {edge_parked[v]}, destinations:{destinations[v]}, time arrive to B and parkage: {time_B_arrive[v] - time_A_start[v]}")
+
+    t_a_to_b_pb_hm = None
+    t_b_to_p_hm = None
+    d_b_to_p_hm = None
+
+    t_a_to_b_pb = None
+    t_b_to_p = None
+    d_b_to_p = None
+
+    print("RISULTATI------------------------")
+    if num_use_heatmap != 0:
+        if num_parcheggio_b_heatmap != 0:
+            t_a_to_b_pb_hm = round(float(tot_time_vehicle_heatmap)/float(num_parcheggio_b_heatmap),2)
+        t_b_to_p_hm = round(float(tot_time_B_to_parkage_heatmap)/float(num_use_heatmap),2)
+        d_b_to_p_hm = round(float(tot_distance_B_to_parkage_heatmap)/float(num_use_heatmap),2)
+        print(f"Tempo medio impiegato per parcheggiare in B per i veicoli che usano la heatmap: {t_a_to_b_pb_hm }s")
+        print(f"Tempo medio ricerca posteggio veicoli che usano la heatmap: {t_b_to_p_hm }s")
+        print(f"distanza media posteggio - punto B usando la heatmap: { d_b_to_p_hm }m")
+    if num_not_use_heatmap != 0:
+        if num_parcheggio_b_not_heatmap != 0:
+            t_a_to_b_pb = round(float(tot_time_vehicle_not_heatmap)/float(num_parcheggio_b_not_heatmap),2)
+        t_b_to_p = round(float(tot_time_B_to_parkage_not_heatmap) / float(num_not_use_heatmap),2)
+        d_b_to_p = round(float(tot_distance_B_to_parkage_not_heatmap) / float(num_not_use_heatmap),2)
+        print(f"Tempo medio impiegato per parcheggiare in B per i veicoli che non usano la heatmap: {t_a_to_b_pb}s")
+        print(f"Tempo medio ricerca posteggio veicoli che non usano la heatmap: { t_b_to_p}s")
+        print(f"distanza media posteggio - punto B non usando la heatmap: { d_b_to_p}m")
+    print("FINE RISULTATI---------------------")
+
+
+
+
+    return t_a_to_b_pb_hm,t_b_to_p_hm,d_b_to_p_hm,t_a_to_b_pb,t_b_to_p,d_b_to_p
+
+def generate_results(perc_hm,numVeicoli,granularità,t_A_Bpb_hm,t_B_p_hm,d_B_p_hm,t_A_Bpb,t_B_p,d_B_p):
+    # Definizione delle intestazioni delle colonne
+    headers = [
+        'percentuale_uso_heatmap',
+        'veicoli',
+        'granularità',
+        'tempo_medio_parcheggio_B_heatmap',
+        'tempo_medio_ricerca_posteggio_heatmap',
+        'distanza_parcheggio_punto_B_heatmap',
+        'tempo_medio_parcheggio_B',
+        'tempo_medio_ricerca_posteggio',
+        'distanza_parcheggio_punto_B'
+
+
+    ]
+
+    filename = 'results_data.csv'
+    file_exists = os.path.isfile(filename)
+    # Scrittura dei dati nel file CSV in modalità append ('a')
+    with open(filename, mode='a', newline='') as file:
+        writer = csv.writer(file)
+
+        # Scrivi le intestazioni solo se il file non esiste
+        if not file_exists:
+            writer.writerow(headers)
+
+        # Genera e scrivi la righe di dati
+        writer.writerow([perc_hm, numVeicoli, granularità,t_A_Bpb_hm,t_B_p_hm, d_B_p_hm, t_A_Bpb, t_B_p,d_B_p])
+
+    print(f"File '{filename}' creato con successo!")
+
+def save_agent_csv(perc_use_heatmap,numero_test_percentuale,vehicle_id, A,B,p,heatmap,tempo_percorso,
+                   tempo_ricerca_parcheggio,pedon_distance):
+    # Nome del file CSV
+    file_name = 'data_agent.csv'
+
+    # Intestazioni del CSV (puoi cambiare questi nomi secondo necessità)
+    header = ['perc_use_heatmap', 'numero_test_percentuale', 'vehicle_id', 'A', 'B', 'p', 'heatmap',
+              'tempo_percorso', 'tempo_ricerca_parcheggio', 'pedon_distance']
+
+    # Dati da salvare
+    data = [perc_use_heatmap, numero_test_percentuale, vehicle_id, A, B, p, heatmap,
+            tempo_percorso, tempo_ricerca_parcheggio, pedon_distance]
+
+    # Verifica se il file esiste già o meno
+    try:
+        with open(file_name, mode='a', newline='') as file:
+            writer = csv.writer(file)
+
+            # Se il file è vuoto, scrivi prima l'intestazione
+            file.seek(0, 2)  # Vai alla fine del file
+            if file.tell() == 0:  # Se il file è vuoto
+                writer.writerow(header)
+
+            # Scrivi i dati
+            writer.writerow(data)
+
+    except Exception as e:
+        print(f"Errore durante la scrittura nel file CSV: {e}")
+
+
+# Funzione che avvia una singola simulazione SUMO
+"""def run_simulation(p, i):
+    # Avvia SUMO con l'opzione --start per iniziare subito la simulazione
+    traci.start(
+        [sumoBinary, "-c", "parking_on_off_road.sumocfg", "--tripinfo-output", f"tripinfo_{p}_{i}.xml", "--start"])
+
+    # Chiama la funzione run che gestisce la logica della simulazione
+    run(p, i)
+
+    # Chiudi la connessione con SUMO alla fine della simulazione
+    traci.close()
+
+
+# Funzione che avvia tutte le simulazioni in parallelo
+def start_simulations_in_parallel(percentuali_heatmap, numero_test_percentuale):
+    # Crea un ProcessPoolExecutor per gestire i processi paralleli
+    with ProcessPoolExecutor() as executor:
+        # Lista di futuri per gestire le esecuzioni parallele
+        futures = []
+
+        # Loop per avviare le simulazioni
+        for p in percentuali_heatmap:
+            for i in range(numero_test_percentuale):
+                # Submit invia l'esecuzione della funzione run_simulation al pool di processi
+                futures.append(executor.submit(run_simulation, p, i))
+
+        # Attendi che tutte le simulazioni siano terminate
+        for future in futures:
+            future.result()  # Questo metodo blocca l'esecuzione finché il processo non è terminato
+
+"""
+def run(percentuali_heatmap,numero_test_percentuale):
     parkage_map = HeatMap(xml_file='heat_map.xml', additional_file='parking_on_off_road.add.xml')
     parkage_map.update(True, real_parkages=True)
-    parkage_map.print_heatmap_values()
+    #parkage_map.print_heatmap_values()
     # salva mappa parcheggi reali
     parkage_map.save_heatmap_to_image('real_parkages.jpg', 'parcheggi reali', True)
 
@@ -928,10 +1129,18 @@ def run():
     car_arrived_in_b = [] #lista di veicoli arrivati al loro punto B
 
     """,preference """
-    starting_lanes,destinations,use_heatmap = get_vehicle_point_A_B() # punti B per ciascun veicolo
+    starting_lanes,destinations,use_heatmap = get_vehicle_point_A_B(percentuali_heatmap) # punti B per ciascun veicolo (parametro)
+    vehicle_use_heatmap = copy.deepcopy(use_heatmap) #usato per ricavare i dati delle analisi
+    origin_destinations = copy.deepcopy(destinations) #copia i punti B originali
 
+    print("Veicoli che usano la heatmap: ",end='')
+    cont_use_heatmap=0
+    for v,use in use_heatmap.items():
+        if use == 'True':
+            print(f"{v},",end='')
+            cont_use_heatmap+=1
 
-
+    perc_use_heatmap = round(float(cont_use_heatmap) / float(len(use_heatmap)),2) #percentuale effettiva
 
 
     #print(destinations)
@@ -943,7 +1152,7 @@ def run():
     print("FINE HEATMAP")
 
 
-    delay_start = 10 # delay di partenza di un veicolo dall' altro
+    delay_start = 10   #delay di partenza di un veicolo dall' altro (parametro)
     current_delay_time = 0 # delay attuale
 
     vehicle_index = 0 # indice del veicolo che sta per partire
@@ -963,14 +1172,32 @@ def run():
     )
     vehicle_index += 1
 
+    #strutture dati per ricavare i dati delle nostre analisi
+
+    time_A_start = {} #momento della sim    ulazione in cui parte il veicolo ( dal punto A )
+    time_A_start[vehicle] = traci.simulation.getTime()
+    time_B_arrive = {} #momento in cui sono arrivato in B (solo casi in cui ho parcheggiato in B )
+    parked_in_B ={} #veicolo, booleano (True se il veicolo a parcheggiato nel punto B corrispondente )
+    time_parked = {} #momenti nei quali i veicoli si sono posteggiati ( veicolo, tempo)
+    edge_parked = {} #edge dove il veicolo si è posteggiato
+
+    points_A = [] #punti A dei veicoli
+    points_parcheggio = [] #punti parcheggi dei veicoli
+    #vehicle_use_heatmap per verificare l' uso della heatmap
+
+
     while traci.simulation.getMinExpectedNumber() > 0:
-        print(f"numero veicoli attuale: {traci.vehicle.getIDList()}")
+        #print(f"numero veicoli attuale: {traci.vehicle.getIDList()}")
         #if len(traci.vehicle.getIDList()) == 0:
             #break
 
-        print(f"veicoli aspettati:{ traci.simulation.getMinExpectedNumber()}")
+        #print(f"veicoli aspettati:{ traci.simulation.getMinExpectedNumber()}")
 
-        if current_delay_time < delay_start and vehicle_index < len(starting_lanes):
+        current_time = traci.simulation.getTime()
+        #print(f"Tempo attuale: {current_time} secondi")
+
+
+        if current_delay_time % delay_start == 0 and vehicle_index < len(starting_lanes):
             vehicle = list(starting_lanes.keys())[vehicle_index]  # Prendi il veicolo successivo
             st_lane = starting_lanes[vehicle]  # Ottieni la lane di partenza
 
@@ -987,21 +1214,21 @@ def run():
                 departSpeed="0.1"  # Velocità massima alla partenza
             )
 
-            traci.vehicle.setMaxSpeed(vehicle, 10.0)
+            traci.vehicle.setMaxSpeed(vehicle, 6.0)
 
             vehicle_index += 1  # Incrementa solo dopo aver aggiunto il veicolo
 
-        current_delay_time = current_delay_time % delay_start
+            time_A_start[vehicle] = current_time
+
+        current_delay_time += 1
 
         traci.simulationStep()
-        current_time = traci.simulation.getTime()
+
+
 
         if len(traci.vehicle.getIDList() ) == 0:
             print("Tutti i veicoli sono usciti: fine simulazione!")
             break
-
-
-
 
 
         for vehicle_id in traci.vehicle.getIDList():
@@ -1016,6 +1243,9 @@ def run():
                 #se c'è arrivato ora
                 if traci.vehicle.getLaneID(vehicle_id).split('_')[0] == destinations[vehicle_id]:
                     car_arrived_in_b.append(vehicle_id)
+                    print(f"veicolo {vehicle_id} arrivato in B: {destinations[vehicle_id]}")
+                    time_B_arrive[vehicle_id] = current_time
+
                     #print(f"Veicolo {vehicle_id} arrivato a destinazione B" )
                 elif traci.vehicle.getRoute(vehicle_id)[-1] != destinations[vehicle_id]:
                     traci.vehicle.changeTarget(vehicle_id, destinations[vehicle_id])
@@ -1059,7 +1289,15 @@ def run():
                             del parked_vehicles[vehicle_id]                         #rimuovo da veicoli parcheggiati
                             recent_parking_vehicles[vehicle_id] = current_time      #aggiungo a veicoli usciti da poco
 
+                            mid_point_B = get_midpoint(net.getEdge(origin_destinations[vehicle_id]))
+                            mid_point_parkage = get_midpoint(net.getEdge(edge_parked[vehicle_id]))
+                            pedon_distance = calculate_distance(mid_point_B,
+                                                                mid_point_parkage)  # calcolo la distanza parcheggio - punto B come
 
+                            save_agent_csv(perc_use_heatmap,numero_test_percentuale,vehicle_id, starting_lanes[vehicle_id]
+                                           ,destinations[vehicle_id],edge_parked[vehicle_id],vehicle_use_heatmap[vehicle_id],
+                                           time_B_arrive[vehicle_id]-time_A_start[vehicle_id],time_parked[vehicle_id]-
+                                           time_B_arrive[vehicle_id],round(pedon_distance,2))
 
                             # cancello ultimo reroute se esiste
                             # se la destinazione non è la lane dove vi è adesso il veicolo
@@ -1098,6 +1336,16 @@ def run():
                             if is_near_parkage(vehicle_id,parking_id,parking_to_edge) and vehicle_id not in parked_vehicles:
                                 if park_vehicle(vehicle_id, parking_id, parking_car_parked, parking_capacity, parked_vehicles):
                                     print(f"Veicolo {vehicle_id} parcheggiato")
+                                    time_parked[vehicle_id] = current_time
+                                    edge_parked[vehicle_id] = traci.parkingarea.getLaneID(parking_id).split('_')[0]
+                                    if parking_to_edge[parking_id] == destinations[vehicle_id]:
+                                        print(f"Veicolo {vehicle_id} parcheggiato nel punto B")
+                                        parked_in_B[vehicle_id] = True
+                                    else:
+                                        print(f"Veicolo {vehicle_id} parcheggiato in un punto diverso da B (origine: {destinations[vehicle_id]}), parcheggio {parking_to_edge[parking_id]}")
+                                        parked_in_B[vehicle_id] = False
+
+
                                     if use_heatmap[vehicle_id] == None:
                                         heatmap.update(True, parked_vehicles[vehicle_id] )
                                 else:
@@ -1149,16 +1397,42 @@ def run():
         deep_copy_heatmap = copy.deepcopy(heatmap)
         storic_heatmap.append(deep_copy_heatmap)
 
+    #calcolo i vari dati
+    print("Inizio raccolta analisi dati...")
+    print(f"Veicoli totali: {len(use_heatmap)}, di cui {cont_use_heatmap} usano la heatmap")
+    print(f"Percentuale {float(cont_use_heatmap) / float(len(use_heatmap)) * 100:.2f}%")
+
+    #print(parked_in_B)
+    tempo_A_B_pB_hm,tempo_B_p_hm,distanza_B_p_hm, tempo_A_B_pB,tempo_B_p,distanza_B_p  = calcola_analisi_dati(
+        time_A_start, time_B_arrive, parked_in_B, vehicle_use_heatmap,time_parked, edge_parked,origin_destinations,net)
+
+
+
+
+    generate_results(f"{float(cont_use_heatmap) / float(len(use_heatmap)) * 100:.2f}%",len(use_heatmap),
+                     heatmap._read_dimensione_area_from_xml(xml_file='heat_map.xml'),tempo_A_B_pB_hm,
+                    tempo_B_p_hm,distanza_B_p_hm, tempo_A_B_pB,tempo_B_p,distanza_B_p)
+
+    print("Fine raccolta analisi dati")
+
+
+
+
+
+
+
+
+
     #Creo GIF della heatmap-----------------
 
     # Cartella temporanea per le immagini
     temp_dir = "images_GIF"
     os.makedirs(temp_dir, exist_ok=True)
     image_filenames = []
-    N = 10  # Salva un'immagine ogni 10 step
+    N = 70  # Salva un'immagine ogni 10 step
 
 
-    print(f"Numero frame heatmap {len(storic_heatmap)}")
+    """print(f"Numero frame heatmap {len(storic_heatmap)}")
 
     # Salva ogni heatmap come immagine
     for i, heatmap in enumerate(storic_heatmap):
@@ -1167,6 +1441,11 @@ def run():
             storic_heatmap[i].save_heatmap_to_image(filename)
             image_filenames.append(filename)
             print(f"salvata immagine {i}")
+
+    filename = f"{temp_dir}/heatmap_{(len(storic_heatmap)/N)*N+N}.png"
+    storic_heatmap[len(storic_heatmap)-1].save_heatmap_to_image(filename)
+    image_filenames.append(filename)
+    print(f"salvata immagine {(len(storic_heatmap)/N)*N+N}")
 
     print("fine salva immagini GIF")
     # Crea una GIF a partire dalle immagini
@@ -1183,15 +1462,15 @@ def run():
     shutil.rmtree(temp_dir)
     print("GIF creata con successo!")
 
-    #fine creazione GIF heatmap-------------------------
+    #fine creazione GIF heatmap-------------------------"""
 
     traci.close()
 
     #salva heatmap
     heatmap.save_heatmap_to_image('heatmap.jpg')
 
-
-
+    print(f"Destinazioni originali:{origin_destinations}")
+    print(f"nuove Destinazioni originali:{destinations}")
 
 
 
@@ -1202,6 +1481,14 @@ def run():
     #    print(f"veicolo {v} : edges {car_history_edge[v]}")
 
 
+def simula_percentuale(p, i):
+    # Avvia SUMO con l'opzione --start per iniziare subito la simulazione
+    traci.start(
+        [sumoBinary, "-c", "parking_on_off_road.sumocfg", "--tripinfo-output", f"tripinfo_{p}_{i}.xml",
+         "--start", "--quit-on-end"])
+
+    # Chiama la funzione run che gestisce la logica della simulazione
+    run(p, i)
 
 #main entry point
 if __name__ == '__main__':
@@ -1213,6 +1500,39 @@ if __name__ == '__main__':
     else:
         sumoBinary = checkBinary('sumo-gui')
 
-    #TraCI inizializza Sumo come sottoprocesso e dopo questo script si connette ed esegue
-    traci.start([sumoBinary, "-c", "parking_on_off_road.sumocfg", "--tripinfo-output", "tripinfo-xml"])
-    run()
+
+    #0,0.25,0.5,0.75
+    percentuali_heatmap = [0,0.25,0.5,0.75,1]
+    numero_test_percentuale = 10
+    #start_simulations_in_parallel(percentuali_heatmap, numero_test_percentuale)
+    for p in percentuali_heatmap:
+        for i in range(numero_test_percentuale):
+            # Avvia SUMO con l'opzione --start per iniziare subito la simulazione
+            traci.start(
+                [sumoBinary, "-c", "parking_on_off_road.sumocfg", "--tripinfo-output", f"tripinfo_{p}_{i}.xml",
+                 "--start","--quit-on-end"])
+
+            # Chiama la funzione run che gestisce la logica della simulazione
+            run(p, i)
+
+
+
+
+
+    # Numero di processi paralleli, puoi modificarlo a seconda del numero di core della tua macchina
+    """numero_processi = 3
+
+    # Parallelizza le simulazioni
+    with concurrent.futures.ProcessPoolExecutor(max_workers=numero_processi) as executor:
+        futures = []
+        for p in percentuali_heatmap:
+            for i in range(numero_test_percentuale):
+                futures.append(executor.submit(simula_percentuale, p, i))
+
+        # Aspetta che tutte le simulazioni siano completate
+        concurrent.futures.wait(futures)"""
+
+
+
+
+

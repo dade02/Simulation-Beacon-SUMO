@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2024-09-18 10:34:00 by Eclipse SUMO netedit Version v1_20_0+2013-dea7f8276dd
+<!-- generated on 2024-10-16 12:05:26 by Eclipse SUMO netedit Version v1_20_0+2013-dea7f8276dd
 <neteditConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/neteditConfiguration.xsd">
 
     <input>
+        <additional-files value="/home/dade/Scrivania/tirocinio/examples/tirocinio/parking_on_off_road/parking_on_off_road.add.xml"/>
         <sumo-net-file value="/home/dade/Scrivania/tirocinio/examples/tirocinio/parking_on_off_road/parking_on_off_road.net.xml"/>
     </input>
 

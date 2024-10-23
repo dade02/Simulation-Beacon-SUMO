@@ -1,0 +1,101 @@
+0%
+
+Veicoli totali: 150, di cui 0 usano la heatmap
+Percentuale 0.00%
+RISULTATI------------------------
+tempo trascorso per andare da punto A a punto B, dove pero' in B mi sono posteggiato per i veicoli che non usano la heatmap: 129.4375s
+tempo tra quando il veicolo ha raggiunto il punto B a quando si e' effettivamente posteggiato per veicoli che non usano la heatmap: 54.25170068027211s
+distanza tra dove il veicolo si e' posteggiato al punto B, quindi, quanto la persona dovra' camminare per raggiungere il punto B non usando la heatmap: 124.65740299490199m
+FINE RISULTATI---------------------
+Fine raccolta analisi dati
+
+25%
+
+Inizio raccolta analisi dati...
+Veicoli totali: 150, di cui 34 usano la heatmap
+Percentuale 22.67%
+RISULTATI------------------------
+tempo trascorso per andare da punto A a punto B, dove pero' in B mi sono posteggiato per i veicoli che usano la heatmap: 140.8235294117647s
+tempo tra quando il veicolo ha raggiunto il punto B a quando si e' effettivamente posteggiato per veicoli che usano la heatmap: 37.36363636363637s
+distanza tra dove il veicolo si e' posteggiato al punto B, quindi, quanto la persona dovra' camminare per raggiungere il punto B usando la heatmap: 71.15332854548241m
+tempo trascorso per andare da punto A a punto B, dove pero' in B mi sono posteggiato per i veicoli che non usano la heatmap: 128.07142857142858s
+tempo tra quando il veicolo ha raggiunto il punto B a quando si e' effettivamente posteggiato per veicoli che non usano la heatmap: 52.92857142857143s
+distanza tra dove il veicolo si e' posteggiato al punto B, quindi, quanto la persona dovra' camminare per raggiungere il punto B non usando la heatmap: 110.00383945002427m
+FINE RISULTATI---------------------
+Fine raccolta analisi dati
+
+
+50%
+
+Inizio raccolta analisi dati...
+Veicoli totali: 150, di cui 78 usano la heatmap
+Percentuale 52.00%
+RISULTATI------------------------
+tempo trascorso per andare da punto A a punto B, dove pero' in B mi sono posteggiato per i veicoli che usano la heatmap: 104.19444444444444s
+tempo tra quando il veicolo ha raggiunto il punto B a quando si e' effettivamente posteggiato per veicoli che usano la heatmap: 50.22666666666667s
+distanza tra dove il veicolo si e' posteggiato al punto B, quindi, quanto la persona dovra' camminare per raggiungere il punto B usando la heatmap: 82.29973749430201m
+tempo trascorso per andare da punto A a punto B, dove pero' in B mi sono posteggiato per i veicoli che non usano la heatmap: 130.5625s
+tempo tra quando il veicolo ha raggiunto il punto B a quando si e' effettivamente posteggiato per veicoli che non usano la heatmap: 48.63768115942029s
+distanza tra dove il veicolo si e' posteggiato al punto B, quindi, quanto la persona dovra' camminare per raggiungere il punto B non usando la heatmap: 114.24522151434809m
+FINE RISULTATI---------------------
+Fine raccolta analisi dati
+
+75%
+
+Inizio raccolta analisi dati...
+Veicoli totali: 150, di cui 111 usano la heatmap
+Percentuale 74.00%
+RISULTATI------------------------
+tempo trascorso per andare da punto A a punto B, dove pero' in B mi sono posteggiato per i veicoli che usano la heatmap: 112.70454545454545s
+tempo tra quando il veicolo ha raggiunto il punto B a quando si e' effettivamente posteggiato per veicoli che usano la heatmap: 48.32727272727273s
+distanza tra dove il veicolo si e' posteggiato al punto B, quindi, quanto la persona dovra' camminare per raggiungere il punto B usando la heatmap: 74.36088348742257m
+tempo trascorso per andare da punto A a punto B, dove pero' in B mi sono posteggiato per i veicoli che non usano la heatmap: 101.33333333333333s
+tempo tra quando il veicolo ha raggiunto il punto B a quando si e' effettivamente posteggiato per veicoli che non usano la heatmap: 46.108108108108105s
+distanza tra dove il veicolo si e' posteggiato al punto B, quindi, quanto la persona dovra' camminare per raggiungere il punto B non usando la heatmap: 93.99159787431724m
+FINE RISULTATI---------------------
+Fine raccolta analisi dati
+
+100%
+
+Inizio raccolta analisi dati...
+Veicoli totali: 150, di cui 150 usano la heatmap
+Percentuale 100.00%
+RISULTATI------------------------
+tempo trascorso per andare da punto A a punto B, dove pero' in B mi sono posteggiato per i veicoli che usano la heatmap: 118.55696202531645s
+tempo tra quando il veicolo ha raggiunto il punto B a quando si e' effettivamente posteggiato per veicoli che usano la heatmap: 34.45255474452555s
+distanza tra dove il veicolo si e' posteggiato al punto B, quindi, quanto la persona dovra' camminare per raggiungere il punto B usando la heatmap: 59.73393699940723m
+FINE RISULTATI---------------------
+Fine raccolta analisi dati
+
+
+Buongiorno, ho svolto i vari test in riferimento alla percentuale di veicoli che sfruttano la heatmap. Preciso che ciascuna percentuale è la probabilità che ciascun veicolo la usi o meno e che non è la percentuale esatta di veicoli che la usano (la percentuale esatta viene riportata in ogni test). Ho cercato comunque di prendere percentuali effettive che si avvicinavano il più possibile a quelle stabilite (0,25,50,75,100 %).
+Elenco anche vari parametri generali:Durata sosta veicolo : 100 sDelay partenza veicolo: 15s (ciascun veicolo parte da una lane casuale ogni 15 secondi)numero veicoli: 150
+granularità heatmap: 20m
+Precisazioni:Il punto B è inteso come una lane.Se un veicolo parcheggia in B, vuol dire che il parcheggio in cui sosta è sulla Lane B.Il tempo medio per parcheggiare una volta raggiunto il punto B è inteso come il tempo impiegato dal veicolo da quando entra nella Lane B a quanto parcheggia in un posteggioLa distanza dal punto B al parcheggio in cui ci si è fermati è nel concreto la distanza che il pedone, sceso dal veicolo, dovrà percorrere a piedi. Ho approssimato questa distanza visto che normalmente un pedone non è costretto a seguire le lane ma può "tagliare" il percorso passando per ad esempio striscie pedonali, sottopassaggi, ecc...Quindi ho calcolato la distanza come la distanza euclidea tra i punti medi (punto a metà di una lane) di due lane: la prima è la lane B, mentre la seconda è la lane dove è situato il parcheggio di sosta. Se ad esempio il veicolo ha parcheggiato in B, la distanza risulterà nulla.
+
+0.00%,150,20.0,,,,125.25806451612904,56.44137931034483,123.09426416245581
+0.00%,150,20.0,,,,132.26470588235293,50.58741258741259,112.8017233964822
+0.00%,150,20.0,,,,132.3235294117647,55.92413793103448,119.28029231516278
+0.00%,150,20.0,,,,132.05882352941177,51.08843537414966,105.6182953485561
+25.33%,150,20.0,96.76190476190476,32.31578947368421,63.02867967010072,121.68,45.373831775700936,107.5521003490731
+27.33%,150,20.0,124.03703703703704,25.525,43.85995396608237,134.20689655172413,43.301886792452834,90.55539282429595
+28.00%,150,20.0,130.92592592592592,34.095238095238095,56.45704311537772,139.95238095238096,52.73529411764706,124.53413090660928
+22.00%,150,20.0,100.41176470588235,36.78787878787879,60.81528527433812,129.85714285714286,47.67857142857143,109.2862134742294
+32.00%,150,20.0,134.12,29.59090909090909,53.85188030701861,137.7826086956522,50.509803921568626,125.60081599154232
+46.67%,150,20.0,120.125,30.942028985507246,51.70179905697049,133.86363636363637,56.037974683544306,130.7949443240757
+43.33%,150,20.0,108.72413793103448,41.267857142857146,68.65275319433336,108.25,55.86746987951807,122.25658864133189
+53.33%,150,20.0,103.13333333333334,46.013698630136986,70.54158063491556,143.5,49.5,112.04928647026944
+52.00%,150,20.0,119.65217391304348,42.33766233766234,66.240090881005,137.875,54.111111111111114,126.43062003120369
+48.00%,150,20.0,127.41463414634147,32.352112676056336,53.017927630955555,128.55,41.63636363636363,102.11457795577005
+74.67%,150,20.0,114.0,47.407766990291265,61.72080388169044,139.77777777777777,58.75,126.75666421690224
+72.00%,150,20.0,122.0,36.43518518518518,60.631100121813446,131.16666666666666,59.142857142857146,142.79497924085652
+72.00%,150,20.0,117.1969696969697,33.37735849056604,58.306480646036775,168.4,55.7,117.79700784645222
+78.67%,150,20.0,117.55,47.0,75.35193646050745,111.0,55.0,125.94846451419828
+73.33%,150,20.0,104.84313725490196,44.706422018348626,69.99960506950785,118.63636363636364,40.1,96.86933460348354
+100.00%,150,20.0,114.19718309859155,39.46896551724138,69.65984762166168,,,
+100.00%,150,20.0,116.07246376811594,42.51700680272109,72.41915407098364,,,
+100.00%,150,20.0,122.15584415584415,36.75352112676056,58.29662762132924,,,
+100.00%,150,20.0,114.0,43.09219858156028,78.3028687206168,,,
+100.00%,150,20.0,117.59210526315789,40.513698630136986,67.7786319971958,,,
+
+ utilizzo app,run,id_veicolo,punto_A,punto_B,punto_parcheggio,utilizzo_app,tempo_percorso,tempo_ricerca_parcheggio,distanza_parcheggio_punto_B
