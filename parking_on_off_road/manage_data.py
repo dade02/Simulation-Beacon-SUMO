@@ -144,6 +144,11 @@ def crea_bar_plot(file_csv):
         legenda_label = f"Percentuale: {percentuale}% - Veicoli: {veicoli}"
         # Tracciamo ogni metrica
         for metrica_heatmap, metrica_no_heatmap in zip(metriche_heatmap, metriche_no_heatmap):
+
+            # Riempie i valori mancanti con 0 per evitare valori NaN nelle colonne delle metriche
+            group[metrica_heatmap] = group[metrica_heatmap].fillna(0)
+            group[metrica_no_heatmap] = group[metrica_no_heatmap].fillna(0)
+
             # Se il gruppo ha dati validi per entrambe le metriche
             if group[metrica_heatmap].notna().any() and group[metrica_no_heatmap].notna().any():
                 # Creiamo un nuovo DataFrame per visualizzare le colonne affiancate per ogni 'alfa'
@@ -172,7 +177,7 @@ def crea_bar_plot(file_csv):
                 plt.legend(title='Tipo di metrica')
 
                 # Salva il grafico in un file (opzionale)
-                plt.savefig(f"barplot_percentuale_{percentuale}_veicoli_{veicoli}_{metrica_heatmap.split('_heatmap'bar)[0]}.png")
+                plt.savefig(f"barplot_percentuale_{percentuale}_veicoli_{veicoli}_{metrica_heatmap.split('_heatmap')[0]}.png")
 
                 # Mostra il grafico
                 plt.show()
@@ -183,7 +188,7 @@ def crea_bar_plot(file_csv):
 if __name__ == '__main__':
     input_csv = 'results_data.csv'  # Sostituisci con il percorso del tuo file
     output_csv = 'media_percentuali.csv'
-    #calcola_media_percentuali(input_csv, output_csv)
+    calcola_media_percentuali(input_csv, output_csv)
 
     # Specifica il percorso del file CSV
     file_path = 'data_agent.csv'

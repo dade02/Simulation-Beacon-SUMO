@@ -1,0 +1,4 @@
+1- prendo n parcheggi (da scegliere)
+2- mi calcolo le loro posizioni nella heatmap
+3- faccio partire i primi n veicoli che usano la heatmap da questi  segnando prima un -1 (avevano parcheggiato precedentemente)
+4- faccio partire i restanti veicoli.
