@@ -423,7 +423,7 @@ class HeatMap:
 
         DIS_SUBMAP = 350  # per la norma D consideriamo una sottomappa di raggio 5 km
 
-        max_score = 0
+        max_score = 0 #provare a settare a -2
         best_lane = None
 
         print(f'Possibili nuove destinazioni per {vehicle_id}')
@@ -1055,7 +1055,7 @@ def start_simulations_in_parallel(percentuali_heatmap, numero_test_percentuale):
 
 """
 
-def popola_heatmap_parcheggi_percentuale(file_xml, percentuale,heatmap): #new
+def popola_heatmap_parcheggi_percentuale(file_xml, percentuale): #new
 
     # Carica e analizza il file XML
     tree = ET.parse(file_xml)
@@ -1070,17 +1070,19 @@ def popola_heatmap_parcheggi_percentuale(file_xml, percentuale,heatmap): #new
         parcheggi_id.append(id)
 
     # Calcola il numero di id da selezionare in base alla percentuale
-    num_id_selezionate = max(1, int((percentuale / 100) * len(parcheggi_id)))
+    num_id_selezionate = max(0, int((percentuale / 100) * len(parcheggi_id)))
 
-    # Seleziona casualmente gli id in base al numero calcolato
-    id_casuali = random.sample(parcheggi_id, num_id_selezionate)
+    id_casuali = []
 
-    for id in id_casuali:
-        heatmap.update(True,id)
+    if num_id_selezionate > 0:
+        # Seleziona casualmente gli id in base al numero calcolato
+        id_casuali = random.sample(parcheggi_id, num_id_selezionate)
+
+
 
     return id_casuali
 
-def set_initial_vehicles_heatmap(vehicles,use_heatmap,id_parkages):
+def set_initial_vehicles_heatmap(vehicles,use_heatmap,id_parkages,heatmap):
     start_vehicles = []
     vehicles_in_parking = {}
 
@@ -1090,6 +1092,8 @@ def set_initial_vehicles_heatmap(vehicles,use_heatmap,id_parkages):
 
     for v,id_p in zip(start_vehicles,id_parkages):
         vehicles_in_parking[v] = id_p
+        heatmap.update(True,id_p)
+        heatmap.update(False, id_p)
 
     return vehicles_in_parking
 
@@ -1176,36 +1180,28 @@ def run(percentuali_heatmap, numero_test_percentuale, alfa, vehicle_number):
 
     delay_start = 10  # delay di partenza di un veicolo dall' altro (parametro)
     current_delay_time = 0  # delay attuale
+    time_A_start = {}  # momento della sim    ulazione in cui parte il veicolo ( dal punto A )
+
+    time_B_arrive = {}  # momento in cui sono arrivato in B (solo casi in cui ho parcheggiato in B )
+    parked_in_B = {}  # veicolo, booleano (True se il veicolo a parcheggiato nel punto B corrispondente )
+    time_parked = {}  # momenti nei quali i veicoli si sono posteggiati ( veicolo, tempo)
+    edge_parked = {}  # edge dove il veicolo si è posteggiato
 
     vehicle_index = 0  # indice del veicolo che sta per partire
 
     vehicle = list(starting_lanes.keys())[vehicle_index]
     st_lane = starting_lanes[vehicle]  # Ottieni la lane di partenza
 
-    print(f"Faccio partire il veicolo: {vehicle}")
+
 
     #new
-    vehicles_in_parking = set_initial_vehicles_heatmap(list(starting_lanes.keys()),use_heatmap,popola_heatmap_parcheggi_percentuale('parking_on_off_road.add.xml',20,heatmap))
-    if vehicle in vehicles_in_parking:
-        parking_id = vehicles_in_parking[vehicle]
-        start_lane = traci.parkingarea.getLaneID(parking_id).split('_')[0]
-        start_position = traci.parkingarea.getLanePosition(parking_id)
+    vehicles_in_parking = set_initial_vehicles_heatmap(list(starting_lanes.keys()),use_heatmap,popola_heatmap_parcheggi_percentuale('parking_on_off_road.add.xml',40),heatmap)
+    print(vehicles_in_parking)
 
+    STOP_PARKAGE_INIT = 20
 
-        traci.route.add(routeID=f"route_{vehicle}",edges = [start_lane])
-        # Aggiungiamo il veicolo alla simulazione e lo parcheggiamo
-        traci.vehicle.add(
-            vehID=vehicle,
-            routeID=f"route_{vehicle}",
-            depart="now",
-            departPos=start_position,  # Posizione iniziale sulla corsia
-            departSpeed="0.1"
-        )
-
-        # Parcheggiamo il veicolo nel parcheggio specificato
-        traci.vehicle.park(vehicle, parking_id)
-
-    else:
+    if len(vehicles_in_parking) == 0:
+        print(f"Faccio partire il veicolo: {vehicle}")
         # Crea una route per il veicolo basata sull'edge (st_lane)
         traci.route.add(routeID=f"route_{vehicle}", edges=[st_lane])
         traci.vehicle.add(
@@ -1214,16 +1210,44 @@ def run(percentuali_heatmap, numero_test_percentuale, alfa, vehicle_number):
             departPos="0",  # Posizione iniziale sulla corsia
             departSpeed="0.1"  # Velocità massima alla partenza
         )
-    vehicle_index += 1
+        vehicle_index += 1
+        time_A_start[vehicle] = traci.simulation.getTime()
+
+    else:
+        for vehicle in vehicles_in_parking:
+            parking_id = vehicles_in_parking[vehicle]
+            start_lane = traci.parkingarea.getLaneID(parking_id).split('_')[0]
+            start_position = traci.parkingarea.getStartPos(parking_id)
+
+
+            traci.route.add(routeID=f"route_{vehicle}",edges = [start_lane])
+            # Aggiungiamo il veicolo alla simulazione e lo parcheggiamo
+            traci.vehicle.add(
+                vehID=vehicle,
+                routeID=f"route_{vehicle}",
+                depart="now",
+                departPos=start_position,  # Posizione iniziale sulla corsia
+                departSpeed="0.1"
+            )
+
+            # Parcheggiamo il veicolo nel parcheggio specificato
+            traci.vehicle.setParkingAreaStop(vehicle, parking_id,STOP_PARKAGE_INIT)
+            time_A_start[vehicle] = traci.simulation.getTime() + STOP_PARKAGE_INIT
+            #starting_lanes.pop(vehicle, None)
+
+        """else:
+            # Crea una route per il veicolo basata sull'edge (st_lane)
+            traci.route.add(routeID=f"route_{vehicle}", edges=[st_lane])
+            traci.vehicle.add(
+                vehID=vehicle,
+                routeID=f"route_{vehicle}",  # Route creata dinamicamente per ogni veicolo
+                departPos="0",  # Posizione iniziale sulla corsia
+                departSpeed="0.1"  # Velocità massima alla partenza
+            )
+        vehicle_index += 1"""
 
     # strutture dati per ricavare i dati delle nostre analisi
 
-    time_A_start = {}  # momento della sim    ulazione in cui parte il veicolo ( dal punto A )
-    time_A_start[vehicle] = traci.simulation.getTime()
-    time_B_arrive = {}  # momento in cui sono arrivato in B (solo casi in cui ho parcheggiato in B )
-    parked_in_B = {}  # veicolo, booleano (True se il veicolo a parcheggiato nel punto B corrispondente )
-    time_parked = {}  # momenti nei quali i veicoli si sono posteggiati ( veicolo, tempo)
-    edge_parked = {}  # edge dove il veicolo si è posteggiato
 
     points_A = []  # punti A dei veicoli
     points_parcheggio = []  # punti parcheggi dei veicoli
@@ -1239,50 +1263,43 @@ def run(percentuali_heatmap, numero_test_percentuale, alfa, vehicle_number):
         current_time = traci.simulation.getTime()
         # print(f"Tempo attuale: {current_time} secondi")
 
+        #da aggiustare
+        #print(f"vehicle_index: {vehicle_index}")
         if current_delay_time % delay_start == 0 and vehicle_index < len(starting_lanes):
-            vehicle = list(starting_lanes.keys())[vehicle_index]  # Prendi il veicolo successivo
-            st_lane = starting_lanes[vehicle]  # Ottieni la lane di partenza
+            vehicle = list(starting_lanes.keys())[vehicle_index]  # Prendi il veicolo
+            #print(list(starting_lanes.keys()))
+            #print(vehicles_in_parking)
+            print(f"considero il veicolo {vehicle}")
+            while vehicle in vehicles_in_parking:
+                vehicle_index += 1
+                vehicle = list(starting_lanes.keys())[vehicle_index]  # Prendi il veicolo successivo
 
-            print(f"Faccio partire il veicolo: {vehicle}")
+            #print(f"Faccio partire il veicolo: {vehicle}")
+
+            # new
+
+            #parking_id = vehicles_in_parking[vehicle]
+            start_lane = starting_lanes[vehicle]
+            #start_position = traci.parkingarea.getStartPos(parking_id)
+
+            traci.route.add(routeID=f"route_{vehicle}", edges=[start_lane])
+            
+            traci.vehicle.add(
+                vehID=vehicle,
+                routeID=f"route_{vehicle}",
+                depart="now",
+                departPos=0,  # Posizione iniziale sulla corsia
+                departSpeed="0.1"
+            )
+            time_A_start[vehicle] = current_time
 
 
-
-            #new
-            if vehicle in vehicles_in_parking:
-
-
-                parking_id = vehicles_in_parking[vehicle]
-                start_lane = traci.parkingarea.getLaneID(parking_id).split('_')[0]
-                start_position = traci.parkingarea.getLanePosition(parking_id)
-
-                traci.route.add(routeID=f"route_{vehicle}", edges=[start_lane])
-                # Aggiungiamo il veicolo alla simulazione e lo parcheggiamo
-                traci.vehicle.add(
-                    vehID=vehicle,
-                    routeID=f"route_{vehicle}",
-                    depart="now",
-                    departPos=start_position,  # Posizione iniziale sulla corsia
-                    departSpeed="0.1"
-                )
-
-                # Parcheggiamo il veicolo nel parcheggio specificato
-                traci.vehicle.park(vehicle, parking_id)
-
-            else:
-                # Crea una route per il veicolo basata sull'edge (st_lane)
-                traci.route.add(routeID=f"route_{vehicle}", edges=[st_lane])
-                traci.vehicle.add(
-                    vehID=vehicle,
-                    routeID=f"route_{vehicle}",  # Route creata dinamicamente per ogni veicolo
-                    departPos="0",  # Posizione iniziale sulla corsia
-                    departSpeed="0.1"  # Velocità massima alla partenza
-                )
 
             traci.vehicle.setMaxSpeed(vehicle, 6.0)
 
             vehicle_index += 1  # Incrementa solo dopo aver aggiunto il veicolo
 
-            time_A_start[vehicle] = current_time
+
 
         current_delay_time += 1
 
@@ -1556,9 +1573,9 @@ if __name__ == '__main__':
 
     # 0,0.25,0.5,0.75,1
     percentuali_heatmap = [1]
-    numero_test_percentuale = 1  # 10
+    numero_test_percentuale = 0.5  # 10
 
-    # ,0.4,0.6,0.8
+    # ,0.3,0.4,0.5,0.6,0.7,0.8
     alfa = [0.2]  # coefficiente dei pesi per calcolare lo score (più è piccola più do' peso alla distanza)
     # start_simulations_in_parallel(percentuali_heatmap, numero_test_percentuale)
     vehicle_number = [250]  # ,300,400,500

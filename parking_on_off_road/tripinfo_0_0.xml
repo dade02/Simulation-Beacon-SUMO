@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2024-11-09 19:25:32 by Eclipse SUMO GUI Version v1_20_0+2013-dea7f8276dd
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="parking_on_off_road.net.xml"/>
+        <additional-files value="parking_on_off_road.add.xml"/>
+    </input>
+
+    <output>
+        <tripinfo-output value="tripinfo_0_0.xml"/>
+    </output>
+
+    <traci_server>
+        <remote-port value="41231"/>
+    </traci_server>
+
+    <gui_only>
+        <quit-on-end value="true"/>
+        <start value="true"/>
+    </gui_only>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="vehicle_0" depart="0.00" departLane="-E76_0" departPos="0.00" departSpeed="0.10" departDelay="0.00" arrival="282.00" arrivalLane="E86_0" arrivalPos="183.31" arrivalSpeed="14.60" duration="282.00" routeLength="1349.59" waitingTime="0.00" waitingCount="0" stopTime="152.00" timeLoss="32.16" rerouteNo="3" devices="tripinfo_vehicle_0" vType="DEFAULT_VEHTYPE" speedFactor="1.06" vaporized=""/>
+    <tripinfo id="vehicle_13" depart="120.00" departLane="-E53_0" departPos="0.00" departSpeed="0.10" departDelay="0.00" arrival="291.00" arrivalLane="-E40_0" arrivalPos="89.06" arrivalSpeed="5.80" duration="171.00" routeLength="900.35" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="20.90" rerouteNo="3" devices="tripinfo_vehicle_13" vType="DEFAULT_VEHTYPE@vehicle_13" speedFactor="1.12" vaporized=""/>
+    <tripinfo id="vehicle_18" depart="170.00" departLane="E12_0" departPos="0.00" departSpeed="0.10" departDelay="0.00" arrival="300.00" arrivalLane="-E40_0" arrivalPos="89.06" arrivalSpeed="5.90" duration="130.00" routeLength="676.68" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="16.14" rerouteNo="1" devices="tripinfo_vehicle_18" vType="DEFAULT_VEHTYPE@vehicle_18" speedFactor="0.94" vaporized=""/>
+</tripinfos>

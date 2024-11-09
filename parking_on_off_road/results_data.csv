@@ -1,0 +1,7 @@
+percentuale_uso_heatmap,veicoli,granularità,alfa,tempo_medio_parcheggio_B_heatmap,tempo_medio_ricerca_posteggio_heatmap,distanza_parcheggio_punto_B_heatmap,tempo_medio_parcheggio_B,tempo_medio_ricerca_posteggio,distanza_parcheggio_punto_B
+0.00%,250,10.0,0.2,,,,128.6,66.54,119.3
+25.20%,250,10.0,0.2,113.94,21.33,111.58,123.95,62.98,121.05
+48.00%,250,10.0,0.2,123.33,18.46,102.94,120.84,60.74,106.65
+76.40%,250,10.0,0.2,132.81,27.23,101.43,121.18,64.75,101.94
+100.00%,250,10.0,0.2,128.06,33.12,94.24,,,
+100.00%,250,10.0,0.2,133.24,33.0,92.95,,,
