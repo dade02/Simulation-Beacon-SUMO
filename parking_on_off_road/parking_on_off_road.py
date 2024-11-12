@@ -489,6 +489,13 @@ def park_vehicle(vehicle_id, parkage_id, parking_car_parked, parking_capacity, p
 
     if occupied_count < capacity:
         print("C' è spazio")
+
+        # Frenata graduale prima di fermare il veicolo (new)
+        target_speed = 2  # Imposta una velocità bassa prima del parcheggio, es. 2 m/s
+        duration = 5  # Tempo per rallentare (in secondi)
+        traci.vehicle.slowDown(vehicle_id, target_speed, duration)
+
+
         time_stop = random.randint(80, 180)
         traci.vehicle.setParkingAreaStop(vehicle_id, parkage_id, time_stop)  # time_stop è la durata della sosta #? (parametro)
         parking_car_parked[parkage_id] += 1
@@ -1195,7 +1202,7 @@ def run(percentuali_heatmap, numero_test_percentuale, alfa, vehicle_number):
 
 
     #new
-    vehicles_in_parking = set_initial_vehicles_heatmap(list(starting_lanes.keys()),use_heatmap,popola_heatmap_parcheggi_percentuale('parking_on_off_road.add.xml',40),heatmap)
+    vehicles_in_parking = set_initial_vehicles_heatmap(list(starting_lanes.keys()),use_heatmap,popola_heatmap_parcheggi_percentuale('parking_on_off_road.add.xml',100),heatmap)
     print(vehicles_in_parking)
 
     STOP_PARKAGE_INIT = 20
@@ -1210,6 +1217,7 @@ def run(percentuali_heatmap, numero_test_percentuale, alfa, vehicle_number):
             departPos="0",  # Posizione iniziale sulla corsia
             departSpeed="0.1"  # Velocità massima alla partenza
         )
+        traci.vehicle.setMaxSpeed(vehicle, 5.0)
         vehicle_index += 1
         time_A_start[vehicle] = traci.simulation.getTime()
 
@@ -1229,7 +1237,7 @@ def run(percentuali_heatmap, numero_test_percentuale, alfa, vehicle_number):
                 departPos=start_position,  # Posizione iniziale sulla corsia
                 departSpeed="0.1"
             )
-
+            traci.vehicle.setMaxSpeed(vehicle, 5.0)
             # Parcheggiamo il veicolo nel parcheggio specificato
             traci.vehicle.setParkingAreaStop(vehicle, parking_id,STOP_PARKAGE_INIT)
             time_A_start[vehicle] = traci.simulation.getTime() + STOP_PARKAGE_INIT
@@ -1295,7 +1303,7 @@ def run(percentuali_heatmap, numero_test_percentuale, alfa, vehicle_number):
 
 
 
-            traci.vehicle.setMaxSpeed(vehicle, 6.0)
+            traci.vehicle.setMaxSpeed(vehicle, 5.0)
 
             vehicle_index += 1  # Incrementa solo dopo aver aggiunto il veicolo
 
@@ -1572,13 +1580,13 @@ if __name__ == '__main__':
         sumoBinary = checkBinary('sumo-gui')
 
     # 0,0.25,0.5,0.75,1
-    percentuali_heatmap = [1]
-    numero_test_percentuale = 0.5  # 10
+    percentuali_heatmap = [0.5]
+    numero_test_percentuale = 10  # 10
 
-    # ,0.3,0.4,0.5,0.6,0.7,0.8
-    alfa = [0.2]  # coefficiente dei pesi per calcolare lo score (più è piccola più do' peso alla distanza)
+    # 0.2,0.3,0.4,0.5,0.6,0.7,0.8
+    alfa = [0.7,0.8]  # coefficiente dei pesi per calcolare lo score (più è piccola più do' peso alla distanza)
     # start_simulations_in_parallel(percentuali_heatmap, numero_test_percentuale)
-    vehicle_number = [250]  # ,300,400,500
+    vehicle_number = [300]  #,250,300
     for p in percentuali_heatmap:
         for a in alfa:
             for v_num in vehicle_number:
