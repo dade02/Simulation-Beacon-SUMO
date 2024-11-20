@@ -423,7 +423,7 @@ class HeatMap:
 
         DIS_SUBMAP = 350  # per la norma D consideriamo una sottomappa di raggio 5 km
 
-        max_score = 0 #provare a settare a -2
+        max_score = -1000 #provare a settare a -2
         best_lane = None
 
         print(f'Possibili nuove destinazioni per {vehicle_id}')
@@ -496,7 +496,7 @@ def park_vehicle(vehicle_id, parkage_id, parking_car_parked, parking_capacity, p
         traci.vehicle.slowDown(vehicle_id, target_speed, duration)
 
 
-        time_stop = random.randint(80, 180)
+        time_stop = random.randint(300, 400)
         traci.vehicle.setParkingAreaStop(vehicle_id, parkage_id, time_stop)  # time_stop è la durata della sosta #? (parametro)
         parking_car_parked[parkage_id] += 1
         parked_vehicles[vehicle_id] = parkage_id
@@ -1202,7 +1202,7 @@ def run(percentuali_heatmap, numero_test_percentuale, alfa, vehicle_number):
 
 
     #new
-    vehicles_in_parking = set_initial_vehicles_heatmap(list(starting_lanes.keys()),use_heatmap,popola_heatmap_parcheggi_percentuale('parking_on_off_road.add.xml',100),heatmap)
+    vehicles_in_parking = set_initial_vehicles_heatmap(list(starting_lanes.keys()),use_heatmap,popola_heatmap_parcheggi_percentuale('parking_on_off_road.add.xml',20),heatmap)
     print(vehicles_in_parking)
 
     STOP_PARKAGE_INIT = 20
@@ -1580,11 +1580,11 @@ if __name__ == '__main__':
         sumoBinary = checkBinary('sumo-gui')
 
     # 0,0.25,0.5,0.75,1
-    percentuali_heatmap = [0.5]
-    numero_test_percentuale = 10  # 10
+    percentuali_heatmap = [1] #poi mettere anche 0
+    numero_test_percentuale =  10 # 10
 
     # 0.2,0.3,0.4,0.5,0.6,0.7,0.8
-    alfa = [0.7,0.8]  # coefficiente dei pesi per calcolare lo score (più è piccola più do' peso alla distanza)
+    alfa = [0.2,0.3,0.4,0.5,0.6,0.7,0.8]  # coefficiente dei pesi per calcolare lo score (più è piccola più do' peso alla distanza)
     # start_simulations_in_parallel(percentuali_heatmap, numero_test_percentuale)
     vehicle_number = [300]  #,250,300
     for p in percentuali_heatmap:
