@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="512eebb4-2755-48ba-a36e-2997792c8778" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analisi.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/barplot_percentuale_50_veicoli_100_distanza_parcheggio_punto_B.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/barplot_percentuale_50_veicoli_100_tempo_medio_parcheggio_B.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/barplot_percentuale_50_veicoli_100_tempo_medio_ricerca_posteggio.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/barplot_percentuale_50_veicoli_50_distanza_parcheggio_punto_B.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/barplot_percentuale_50_veicoli_50_tempo_medio_parcheggio_B.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/barplot_percentuale_50_veicoli_50_tempo_medio_ricerca_posteggio.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_agent.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/heatmap.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/heatmap.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/heatmap_animation.gif" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/manage_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/manage_data.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/media_percentuali.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/parking_on_off_road.add.xml" beforeDir="false" afterPath="$PROJECT_DIR$/parking_on_off_road.add.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/parking_on_off_road.py" beforeDir="false" afterPath="$PROJECT_DIR$/parking_on_off_road.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_parkages.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/real_parkages.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/results_data.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/setDestination.csv" beforeDir="false" afterPath="$PROJECT_DIR$/setDestination.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tripinfo_0.5_0.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tripinfo_0.5_1.xml" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 3
+}</component>
+  <component name="ProjectId" id="2npaaH76h4M41aAcuRx6tkDm5hI" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;analisys&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/dade/Scrivania/algoritmi_ottimizzazione/LAB&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-5c90d61e3bab-JavaScript-PY-242.23726.102" />
+        <option value="bundled-python-sdk-5e1850174b45-399fe30bd8c1-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-242.23726.102" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="512eebb4-2755-48ba-a36e-2997792c8778" name="Changes" comment="" />
+      <created>1729672532774</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1729672532774</updated>
+      <workItem from="1729672533798" duration="981000" />
+      <workItem from="1729701836650" duration="7074000" />
+      <workItem from="1729758109330" duration="6267000" />
+      <workItem from="1729778142975" duration="31528000" />
+      <workItem from="1729863601813" duration="31963000" />
+      <workItem from="1729896735158" duration="19826000" />
+      <workItem from="1730023998756" duration="29946000" />
+      <workItem from="1730060569527" duration="16887000" />
+      <workItem from="1730078396302" duration="4720000" />
+      <workItem from="1730112325542" duration="626000" />
+      <workItem from="1730308022442" duration="599000" />
+      <workItem from="1730336492050" duration="601000" />
+      <workItem from="1730348096255" duration="3477000" />
+      <workItem from="1730386707988" duration="3909000" />
+      <workItem from="1730458945277" duration="17974000" />
+      <workItem from="1730539080846" duration="3625000" />
+      <workItem from="1730593305550" duration="1895000" />
+      <workItem from="1730803861471" duration="36000" />
+      <workItem from="1730804162813" duration="39000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

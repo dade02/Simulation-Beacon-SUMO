@@ -4,8 +4,7 @@
            sigma="1.0" maxSpeed="10"/>
 
 
-     <route id="route0" edges="-E2"/>
-    <flow id="carflow" type="car" brg="0" end="0" number="10" route="route0">
+     <route id="route0" edges="-E85"/>
+    <flow id="carflow" type="car"  begin="0" end="500" number="50" route="route0">
     </flow>
 </routes>
-

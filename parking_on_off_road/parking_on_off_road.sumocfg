@@ -1,7 +1,7 @@
 <configuration>
     <input>
         <net-file value="parking_on_off_road.net.xml"/>
-        <route-files value="parking_on_off_road.rou.xml"/>
+
         <additional-files value="parking_on_off_road.add.xml"/>
     </input>
 </configuration>

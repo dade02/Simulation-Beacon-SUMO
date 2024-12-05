@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2024-11-20 10:31:58 by Eclipse SUMO GUI Version v1_20_0+2013-dea7f8276dd
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="parking_on_off_road.net.xml"/>
+        <additional-files value="parking_on_off_road.add.xml"/>
+    </input>
+
+    <output>
+        <tripinfo-output value="tripinfo_1_0.xml"/>
+    </output>
+
+    <traci_server>
+        <remote-port value="54479"/>
+    </traci_server>
+
+    <gui_only>
+        <quit-on-end value="true"/>
+        <start value="true"/>
+    </gui_only>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+</tripinfos>
