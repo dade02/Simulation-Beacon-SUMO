@@ -1,2 +1,1 @@
-# tirocinio
-Versione delle simulazioni SUMO
+Simulazione SUMO beacon ricerca posteggio.
