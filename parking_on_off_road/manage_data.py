@@ -4,6 +4,7 @@ import csv
 import re
 import matplotlib.pyplot as plt
 import seaborn as sns
+import argparse
 
 def calcola_media_percentuali(input_csv, output_csv):
     # Leggi il file CSV
@@ -183,10 +184,92 @@ def crea_bar_plot(file_csv):
                 plt.show()
 
 
+def crea_grafici_percentuali(file_csv):
+    # Leggi il CSV in un DataFrame pandas
+    df = pd.read_csv(file_csv)
+
+    # Lista delle metriche da tracciare
+    metriche_heatmap = ['tempo_medio_parcheggio_B_heatmap', 'tempo_medio_ricerca_posteggio_heatmap',
+                        'distanza_parcheggio_punto_B_heatmap']
+    metriche_no_heatmap = ['tempo_medio_parcheggio_B', 'tempo_medio_ricerca_posteggio',
+                           'distanza_parcheggio_punto_B']
+
+    # Genera un grafico per ciascuna metrica
+    for metrica_heatmap, metrica_no_heatmap in zip(metriche_heatmap, metriche_no_heatmap):
+        plt.figure(figsize=(12, 6))  # Crea una nuova figura per ciascun grafico
+
+        # Traccia la metrica con heatmap (linea blu)
+        sns.lineplot(data=df, x='percentuale_uso_rounded', y=metrica_heatmap, marker='o',
+                     label=f"Heatmap: {metrica_heatmap}", color='blue')
+
+        # Traccia la metrica senza heatmap (linea arancione)
+        sns.lineplot(data=df, x='percentuale_uso_rounded', y=metrica_no_heatmap, marker='o',
+                     label=f"No Heatmap: {metrica_no_heatmap}", color='orange')
+
+        # Aggiungi titolo, label degli assi e legenda
+        plt.title(f"Andamento di {metrica_heatmap.split('_heatmap')[0]} rispetto alla percentuale di veicoli con heatmap")
+        plt.xlabel('Percentuale di veicoli che usano la heatmap (%)')
+        plt.ylabel('Valore della metrica')
+        plt.xticks([0, 25, 50, 75, 100])  # Imposta le etichette sull'asse X
+        plt.grid(True)
+        plt.legend()
+
+        # Salva il grafico in un file
+        filename = f"grafico_{metrica_heatmap.split('_heatmap')[0]}.png"
+        plt.savefig(filename)
+        print(f"Grafico salvato come {filename}")
+
+        # Mostra il grafico
+        plt.show()
+
+
+def crea_grafici(file_csv):
+    """
+    Legge i dati dal file CSV e genera grafici heatmap e lineari per le metriche fornite.
+
+    Parametri:
+        file_csv (str): Percorso al file CSV contenente i dati.
+    """
+    # Legge il file CSV in un DataFrame
+    df = pd.read_csv(file_csv)
+
+    # Liste delle metriche da tracciare
+    metriche_heatmap = ['tempo_medio_parcheggio_B_heatmap', 'tempo_medio_ricerca_posteggio_heatmap','distanza_parcheggio_punto_B_heatmap']
+    metriche_no_heatmap = ['tempo_medio_parcheggio_B', 'tempo_medio_ricerca_posteggio','distanza_parcheggio_punto_B']
+
+    # Genera un grafico per ciascuna coppia di metriche
+    for metrica_heatmap, metrica_no_heatmap in zip(metriche_heatmap, metriche_no_heatmap):
+        plt.figure(figsize=(12, 6))  # Nuova figura per ciascun grafico
+
+        # Traccia la metrica con heatmap (linea blu)
+        sns.lineplot(data=df, x='perc_init_heatmap', y=metrica_heatmap, marker='o',
+                     label=f"Heatmap: {metrica_heatmap}", color='blue')
+
+        # Traccia la metrica senza heatmap (linea arancione)
+        sns.lineplot(data=df, x='perc_init_heatmap', y=metrica_no_heatmap, marker='o',
+                     label=f"No Heatmap: {metrica_no_heatmap}", color='orange')
+
+        # Aggiungi titolo, assi e legenda
+        plt.title(
+            f"Confronto di {metrica_heatmap.split('_heatmap')[0]} rispetto alla percentuale di inizializzazione heatmap")
+        plt.xlabel('Percentuale di inizializzazione heatmap (%)')
+        plt.ylabel('Valore della metrica')
+        plt.xticks([0, 20, 40, 60, 80, 100])  # Imposta le etichette sull'asse X
+        plt.grid(True)
+        plt.legend()
+
+        # Salva il grafico in un file
+        filename = f"grafico_percInitHeatmap_{metrica_heatmap.split('heatmap')[0]}.png"
+        plt.savefig(filename)
+        print(f"Grafico salvato come {filename}")
+
+        # Mostra il grafico
+        plt.show()
+
 
 
 if __name__ == '__main__':
-    input_csv = 'results_data.csv'  # Sostituisci con il percorso del tuo file
+    """input_csv = 'results_data.csv'  # Sostituisci con il percorso del tuo file
     output_csv = 'media_percentuali.csv'
     calcola_media_percentuali(input_csv, output_csv)
 
@@ -195,4 +278,28 @@ if __name__ == '__main__':
     # Eseguiamo la funzione per ordinare e sovrascrivere il file CSV
     sort_data(file_path)
 
-    crea_bar_plot(output_csv)
+    crea_bar_plot(output_csv)"""
+
+    parser = argparse.ArgumentParser(description="Genera grafici basati su un CSV di input")
+    parser.add_argument('--input_csv', type=str, default='results_data.csv',
+                        help="Percorso del file CSV di input")
+    parser.add_argument('--output_csv', type=str, default=False,
+                        help="Percorso del file CSV di output")
+    parser.add_argument('--skip_media', action='store_true',
+                        help="Salta il calcolo della media e usa il file CSV esistente")
+    #parser.add_argument('--percInitHeatmap',default='percInitHeatmap.csv',
+    #                    help="Salta il calcolo della media e usa il file CSV esistente")
+    args = parser.parse_args()
+
+    # Verifica se `--input_csv` è stato passato
+
+    #if args.percInitHeatmap:
+    #    crea_grafici(args.percInitHeatmap)
+    #el
+    if args.skip_media:
+        crea_bar_plot(args.output_csv)
+        crea_grafici_percentuali(args.output_csv)
+    else:
+        calcola_media_percentuali(args.input_csv, args.output_csv)
+        crea_bar_plot(args.output_csv)
+        crea_grafici_percentuali(args.output_csv)
