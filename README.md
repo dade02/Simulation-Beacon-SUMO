@@ -60,7 +60,7 @@ Lo script `manage_data.py` è progettato per elaborare i dati generati dalla sim
 **Calcolo delle medie dei dati e rappresentazione grafica**  
 Lo script prende in input il file `results_data.csv`, che contiene i dati raccolti durante la simulazione, e calcola le medie per ciascun gruppo di simulazioni con parametri simili.  
 Per eseguire questa operazione e salvare i risultati in un nuovo file CSV:  
-   ```bash
+  ```bash
    python3 manage_data.py --output csv NOME_FILE.csv
   ```
 Se si dispone già di un file contenente le medie e si vuole solo creare i grafici:
