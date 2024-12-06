@@ -18,8 +18,9 @@ Nella directory principale sono presenti i seguenti file:
 - **`heat_map.xml`**: File che definisce la granularità della heatmap nella simulazione.
 
 ## **Dipendenze**
-Versione Python: **3.11.2** 
-Il progetto richiede le seguenti librerie Python:
+**Versione Python**
+Questo script è stato testato con Python 3.11.2. Per garantire il corretto funzionamento, è consigliato utilizzare questa versione o versioni compatibili.
+**Il progetto richiede le seguenti librerie Python:**
 - `numpy`: Per operazioni matematiche avanzate.
 - `pandas`: Per la manipolazione e l'analisi di dati strutturati.
 - `seaborn`: Per la creazione di grafici statistici.
@@ -67,4 +68,10 @@ Se si dispone già di un file contenente le medie e si vuole solo creare i grafi
    ```bash
    python3 manage_data.py --skip-media --output grafici
    ```
+## **Contatti**  
+Per domande, segnalazioni di bug o suggerimenti:  
+- **Email**: `309004@studenti.unimore.it`  
+- **GitHub**: [@dade02](https://github.com/dade02)   
+
+Siamo felici di ricevere feedback per migliorare il progetto o aiutarti a risolvere eventuali problemi. Non esitare a contattarci!
 
