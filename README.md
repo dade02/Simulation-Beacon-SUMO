@@ -44,7 +44,7 @@ Questo script è stato testato con Python 3.11.2. Per garantire il corretto funz
     ```
 
 ## **Avvio della Simulazione**
-
+Posizionarsi nella directory clonata.
 Per avviare la simulazione, utilizza il comando:
 ```bash
 python3 parking_on_off_road.py
