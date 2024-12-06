@@ -1,6 +1,7 @@
-# Parking On/Off Road Simulation
+# Simulazione di Gestione Parcheggi con SUMO e TraCI
 
-Questo progetto utilizza **SUMO** (Simulation of Urban Mobility) e **TraCI** per simulare la gestione dei parcheggi lungo una rete stradale. Consente di analizzare le dinamiche dei parcheggi con e senza il supporto di una heatmap, calcolare statistiche e produrre visualizzazioni utili per lo studio del traffico urbano.
+Questo progetto utilizza **SUMO** (Simulation of Urban Mobility) e **TraCI** per simulare la gestione dei parcheggi lungo una rete stradale. Consente di analizzare le dinamiche dei parcheggi con e senza il supporto di una heatmap, calcolare statistiche e produrre visualizzazioni utili per lo studio del traffico urbano. 
+Quello che si vuole simulare è il comportamento di veicoli dotati di dispositivi beacon per monitorare la disponibilità dei parcheggi urbani. Non tutti i veicoli utilizzano la heatmap, e l'obiettivo del progetto è determinare quanti veicoli devono essere equipaggiati con questi dispositivi per ottenere ottimizzazioni significative nella gestione dei parcheggi. La simulazione vuole modellare scenari realistici e analizzare la fattibilità dell'implementazione di questo sistema in un contesto urbano. L'obiettivo è capire se il sistema possa essere effettivamente implementato e se possa portare a benefici concreti in termini di riduzione dei tempi di ricerca dei parcheggi e miglioramento dell'efficienza del traffico.
 
 ## **Struttura del Progetto**
 
@@ -20,7 +21,7 @@ Nella directory principale sono presenti i seguenti file:
 ## **Dipendenze**
 **Versione Python**
 Questo script è stato testato con Python 3.11.2. Per garantire il corretto funzionamento, è consigliato utilizzare questa versione o versioni compatibili.
-**Il progetto richiede le seguenti librerie Python:**
+**Il progetto richiede i seguenti moduli Python:**
 - `numpy`: Per operazioni matematiche avanzate.
 - `pandas`: Per la manipolazione e l'analisi di dati strutturati.
 - `seaborn`: Per la creazione di grafici statistici.
