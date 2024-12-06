@@ -1,1 +1,53 @@
-Simulazione SUMO beacon ricerca posteggio.
+# Parking On/Off Road Simulation
+
+Questo progetto utilizza **SUMO** (Simulation of Urban Mobility) e **TraCI** per simulare la gestione dei parcheggi lungo una rete stradale. Consente di analizzare le dinamiche dei parcheggi con e senza il supporto di una heatmap, calcolare statistiche e produrre visualizzazioni utili per lo studio del traffico urbano.
+
+## **Struttura del Progetto**
+
+Nella directory principale sono presenti i seguenti file:
+
+- **`parking_on_off_road.py`**: Script Python principale che controlla la simulazione, interagendo dinamicamente con la rete tramite il modulo TraCI. Gestisce veicoli e parcheggi e raccoglie i dati della simulazione.
+- **`parking_on_off_road.sumocfg`**: File di configurazione di SUMO, che definisce i file richiesti per la simulazione (rete stradale, parcheggi, ecc.).
+- **`parking_on_off_road.net.xml`**: Descrive la rete stradale, inclusi incroci e collegamenti.
+- **`parking_on_off_road.add.xml`**: Specifica i parcheggi lungo la rete, con parametri come:
+  - `id`: Identificativo univoco del parcheggio.
+  - `lane`: Corsia su cui il parcheggio si trova.
+  - `startPos` e `endPos`: Posizione del parcheggio sulla corsia (in metri).
+  - `roadsideCapacity`: Numero di posti disponibili.
+- **`manage_data.py`**: Script Python per manipolare ed analizzare i risultati della simulazione. Calcola le medie dei dati raccolti e genera grafici.
+- **`heat_map.xml`**: File che definisce la granularità della heatmap nella simulazione.
+
+## **Dipendenze**
+
+Il progetto richiede le seguenti librerie Python:
+- `numpy`: Per operazioni matematiche avanzate.
+- `pandas`: Per la manipolazione e l'analisi di dati strutturati.
+- `seaborn`: Per la creazione di grafici statistici.
+- `imageio`: Per la gestione di immagini e video.
+
+## **Installazione**
+
+1. Clona il repository:
+    ```bash
+    git clone https://github.com/dade02/tirocinio.git
+    cd tirocinio
+    ```
+2. Crea un ambiente virtuale:
+    ```bash
+    pipenv shell
+    ```
+3. Installa le dipendenze:
+    ```bash
+    pipenv install
+    ```
+
+## **Avvio della Simulazione**
+
+Per avviare la simulazione, utilizza il comando:
+```bash
+python3 parking_on_off_road.py
+
+Se desideri disabilitare l'interfaccia grafica di SUMO:
+```bash
+python3 parking_on_off_road.py --nogui
+```
